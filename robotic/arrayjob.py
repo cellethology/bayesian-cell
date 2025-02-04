@@ -42,8 +42,6 @@ class SimulationRunner:
             "adaptive_config": adaptive_env.config,
             "fixed_steps_to_target": fixed_steps_to_target,
             "adaptive_steps_to_target": adaptive_steps_to_target,
-            "fixed_trajectory": fixed_traj,
-            "adaptive_trajectory": adaptive_traj,
         }
 
         # Save the results to a file named using the seed.
@@ -58,7 +56,7 @@ class SimulationRunner:
 if __name__ == "__main__":
     # Number of runs for each strategy (each run produces one fixed-sigma and one adaptive-sigma result)
     n_runs = 50  # Change this value as needed.
-    max_steps = 1e9  # Maximum simulation steps
+    max_steps = 1000000  # Maximum simulation steps
 
     # Define the configuration for the fixed-sigma simulation.
     # Here, we force the adaptive sigma to be fixed by setting min_motion_sigma and max_motion_sigma equal.
@@ -93,7 +91,7 @@ if __name__ == "__main__":
     executor = submitit.AutoExecutor(folder="submitit_logs")
     executor.update_parameters(
         timeout_min=1200,  # maximum runtime in minutes
-        gpus=0,  # number of GPUs (0 if not needed)
+        gpus_per_node=0,  # number of GPUs (0 if not needed)
         cpus_per_task=1,  # number of CPUs per task
         nodes=1,
     )
@@ -102,9 +100,9 @@ if __name__ == "__main__":
     job = executor.map_array(lambda task: task(), tasks)
 
     # Optionally, wait for all results to complete and print a summary.
-    results = job.results()
+    results = [future.results() for future in job]
     for res in results:
         print(
-            f"Seed {res['seed']}: Fixed steps = {res['fixed_steps_to_target']}, "
-            f"Adaptive steps = {res['adaptive_steps_to_target']}"
+            f"Seed {res[0]['seed']}: Fixed steps = {res[0]['fixed_steps_to_target']}, "
+            f"Adaptive steps = {res[0]['adaptive_steps_to_target']}"
         )
