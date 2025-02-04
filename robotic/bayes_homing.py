@@ -253,6 +253,9 @@ def run_simulation(config=None, steps=50):
         ):
             print(f"Target reached in {len(trajectory)} steps!")
             break
+        elif step % 100 == 0:
+            print(f"Step {step} of {steps}")
+            print(f"True position: {true_pos}")
 
     if step == steps - 1:
         print(f"Simulation ended after maximum {steps} steps")
