@@ -79,7 +79,7 @@ if __name__ == "__main__":
             "signal_decay_exp": 0.3,
             "movement_step_size": 0.1,
             "kernel_size": 5,
-            "target_reach_threshold": 2.0,
+            "target_reach_threshold": 5.0,
         }
 
         # Define the configuration for the adaptive-sigma simulation
@@ -112,7 +112,7 @@ if __name__ == "__main__":
         print(
             f"Seed {res[0]['seed']}: Fixed steps = {res[0]['fixed_steps_to_target']}, "
             f"Adaptive steps = {res[0]['adaptive_steps_to_target']}, "
-            f"Measurement Noise Factor = {res[0]['measurement_noise_factor']}"
+            f"Measurement Noise Factor = {res[0]["fixed_config"]['measurement_noise_factor']}"
         )
 
     # Organize the results into two dictionaries, one for fixed-sigma and one for adaptive-sigma. For each dictionary, the keys are the measurement noise factors and the values are lists of the number of steps to reach the target for each seed.
