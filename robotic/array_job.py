@@ -58,7 +58,7 @@ if __name__ == "__main__":
     max_steps = 100000000  # Maximum simulation steps
 
     # Define the range of measurement_noise_factor values to test
-    measurement_noise_factors = np.logspace(-4, 0, num=10)
+    measurement_noise_factors = np.logspace(-3, -1, num=5)
 
     # Generate a list of seeds so that each run gets a unique seed.
     seeds = list(range(1, n_runs + 1))
@@ -77,7 +77,7 @@ if __name__ == "__main__":
             "measurement_noise_factor": measurement_noise_factor,
             "signal_strength_max": 0.2,
             "signal_decay_exp": 0.3,
-            "movement_step_size": 1,
+            "movement_step_size": 0.01,
             "kernel_size": 5,
             "target_reach_threshold": 2.0,
         }
