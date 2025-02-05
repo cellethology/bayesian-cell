@@ -45,7 +45,7 @@ class SimulationRunner:
         }
 
         # Save the results to a file named using the seed.
-        output_filename = f"results_seed_{self.seed}.json"
+        output_filename = f"tmp/results_seed_{self.seed}.json"
         with open(output_filename, "w") as f:
             json.dump(results, f, indent=2)
 
@@ -96,7 +96,7 @@ if __name__ == "__main__":
         )
 
     # Set up the Submitit executor.
-    executor = submitit.AutoExecutor(folder="submitit_logs")
+    executor = submitit.AutoExecutor(folder="tmp/submitit_logs")
     executor.update_parameters(
         timeout_min=240,  # maximum runtime in minutes
         gpus_per_node=0,  # number of GPUs (0 if not needed)
@@ -128,9 +128,9 @@ if __name__ == "__main__":
         )
 
     # Save the results to a file.
-    with open("fixed_results.json", "w") as f:
+    with open("tmp/fixed_results.json", "w") as f:
         json.dump(fixed_results, f, indent=2)
-    with open("adaptive_results.json", "w") as f:
+    with open("tmp/adaptive_results.json", "w") as f:
         json.dump(adaptive_results, f, indent=2)
 
     print("All done!")
