@@ -2,7 +2,7 @@
 import json
 import numpy as np
 import submitit
-from bayes_navigation import run_simulation
+from bayes_navigation import run_navigation_simulation
 
 
 class SimulationRunner:
@@ -22,14 +22,14 @@ class SimulationRunner:
     def __call__(self):
         np.random.seed(self.seed)
         # Run simulation with the fixed-sigma configuration.
-        fixed_traj, _, fixed_env = run_simulation(
+        fixed_traj, _, fixed_env = run_navigation_simulation(
             config=self.fixed_config, steps=self.steps
         )
         fixed_steps_to_target = len(fixed_traj)
 
         # Reset the seed to ensure the adaptive simulation experiences the same random numbers.
         np.random.seed(self.seed)
-        adaptive_traj, _, adaptive_env = run_simulation(
+        adaptive_traj, _, adaptive_env = run_navigation_simulation(
             config=self.adaptive_config, steps=self.steps
         )
         adaptive_steps_to_target = len(adaptive_traj)
@@ -54,7 +54,7 @@ class SimulationRunner:
 
 if __name__ == "__main__":
     # Number of runs for each strategy (each run produces one fixed-sigma and one adaptive-sigma result)
-    n_runs = 50  # Change this value as needed.
+    n_runs = 50  # Number of repeated runs
     max_steps = 1000000  # Maximum simulation steps
 
     # Define the range of measurement_noise_factor values to test
