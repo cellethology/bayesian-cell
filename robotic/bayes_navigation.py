@@ -165,7 +165,7 @@ def run_navigation_simulation(config=None, steps=100):
 
 
 if __name__ == "__main__":
-    np.random.seed(52)
+    np.random.seed(42)
     example_config = {
         "grid_size": 100,
         "movement_step_size": 0.01,
