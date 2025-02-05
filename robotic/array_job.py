@@ -22,14 +22,14 @@ class SimulationRunner:
     def __call__(self):
         np.random.seed(self.seed)
         # Run simulation with the fixed-sigma configuration.
-        fixed_traj, _, fixed_env = run_navigation_simulation(
+        fixed_traj, fixed_env, _ = run_navigation_simulation(
             config=self.fixed_config, steps=self.steps
         )
         fixed_steps_to_target = len(fixed_traj)
 
         # Reset the seed to ensure the adaptive simulation experiences the same random numbers.
         np.random.seed(self.seed)
-        adaptive_traj, _, adaptive_env = run_navigation_simulation(
+        adaptive_traj, adaptive_env, _ = run_navigation_simulation(
             config=self.adaptive_config, steps=self.steps
         )
         adaptive_steps_to_target = len(adaptive_traj)

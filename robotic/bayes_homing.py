@@ -261,7 +261,7 @@ def run_simulation(config=None, steps=50):
         print(f"Simulation ended after maximum {steps} steps")
         pass
 
-    return trajectory, adaptive_sigmas, env
+    return trajectory, env, adaptive_sigmas
 
 
 if __name__ == "__main__":
@@ -284,7 +284,7 @@ if __name__ == "__main__":
     }
 
     # Run and visualize simulation
-    trajectory, adaptive_sigmas, env = run_simulation(config=example_config, steps=10)
+    trajectory, env, adaptive_sigmas = run_simulation(config=example_config, steps=10)
     trajectory = np.array(trajectory)
 
     # Create figure with two subplots
