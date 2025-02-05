@@ -13,7 +13,7 @@ class BayesianNavigation:
             "true_motion_sigma": 0.5,  # Actual noise in robot motion
             "min_motion_sigma": 0.1,  # Minimum uncertainty in motion model (D_base)
             "max_motion_sigma": 0.5,  # Maximum uncertainty in motion model (D_max)
-            "motion_decay_rate": 4,  # How quickly uncertainty decreases with signal (k)
+            "motion_decay_rate": 8,  # How quickly uncertainty decreases with signal (k)
             "measurement_noise_factor": 1e-4,
             "signal_strength_max": 1,
             "signal_decay_exp": 0.3,
@@ -168,11 +168,12 @@ if __name__ == "__main__":
     np.random.seed(42)
     example_config = {
         "grid_size": 100,
-        "movement_step_size": 0.01,
+        "movement_step_size": 0.02,
         "true_motion_sigma": 0.5,  # Actual noise in robot motion
         "min_motion_sigma": 0.5,  # Minimum uncertainty in motion model (D_base)
         "max_motion_sigma": 0.5,  # Maximum uncertainty in motion model (D_max)
-        "measurement_noise_factor": 0.02,
+        "measurement_noise_factor": 0.1,
+        "motion_decay_rate": 4,
         "signal_strength_max": 0.2,
     }
     trajectory, env, sigmas = run_navigation_simulation(

@@ -75,9 +75,9 @@ if __name__ == "__main__":
             "max_motion_sigma": 0.5,
             "motion_decay_rate": 4.0,  # Irrelevant when min == max
             "measurement_noise_factor": measurement_noise_factor,
-            "signal_strength_max": 0.1,
+            "signal_strength_max": 0.2,
             "signal_decay_exp": 0.3,
-            "movement_step_size": 0.1,
+            "movement_step_size": 0.02,
             "kernel_size": 5,
             "target_reach_threshold": 5.0,
         }
