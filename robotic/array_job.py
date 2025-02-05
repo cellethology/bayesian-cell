@@ -55,7 +55,7 @@ class SimulationRunner:
 if __name__ == "__main__":
     # Number of runs for each strategy (each run produces one fixed-sigma and one adaptive-sigma result)
     n_runs = 50  # Number of repeated runs
-    max_steps = 1000000  # Maximum simulation steps
+    max_steps = 100000000  # Maximum simulation steps
 
     # Define the range of measurement_noise_factor values to test
     measurement_noise_factors = np.logspace(-4, 0, num=10)
@@ -77,7 +77,7 @@ if __name__ == "__main__":
             "measurement_noise_factor": measurement_noise_factor,
             "signal_strength_max": 0.2,
             "signal_decay_exp": 0.3,
-            "movement_step_size": 0.01,
+            "movement_step_size": 1,
             "kernel_size": 5,
             "target_reach_threshold": 2.0,
         }
