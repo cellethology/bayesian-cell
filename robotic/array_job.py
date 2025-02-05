@@ -1,9 +1,8 @@
 #!/usr/bin/env python
-import os
 import json
 import numpy as np
 import submitit
-from bayes_homing import run_simulation
+from bayes_navigation import run_simulation
 
 
 class SimulationRunner:

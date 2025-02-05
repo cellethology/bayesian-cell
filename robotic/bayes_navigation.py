@@ -170,9 +170,9 @@ if __name__ == "__main__":
         "grid_size": 100,
         "movement_step_size": 0.01,
         "true_motion_sigma": 0.5,  # Actual noise in robot motion
-        "min_motion_sigma": 1e-10,  # Minimum uncertainty in motion model (D_base)
+        "min_motion_sigma": 0.5,  # Minimum uncertainty in motion model (D_base)
         "max_motion_sigma": 0.5,  # Maximum uncertainty in motion model (D_max)
-        "measurement_noise_factor": 1e-2,
+        "measurement_noise_factor": 0.02,
         "signal_strength_max": 0.2,
     }
     trajectory, env, sigmas = run_navigation_simulation(
