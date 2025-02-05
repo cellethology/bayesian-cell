@@ -284,7 +284,7 @@ if __name__ == "__main__":
     }
 
     # Run and visualize simulation
-    trajectory, adaptive_sigmas, env = run_simulation(config=example_config, steps=100)
+    trajectory, adaptive_sigmas, env = run_simulation(config=example_config, steps=10)
     trajectory = np.array(trajectory)
 
     # Create figure with two subplots
@@ -307,13 +307,13 @@ if __name__ == "__main__":
 
     plt.tight_layout()
 
-    # Save plot
-    plt.savefig(
-        "bayes_homing_example_nonadaptive.svg",
-        format="svg",
-        dpi=300,
-        bbox_inches="tight",
-    )
+    # # Save plot
+    # plt.savefig(
+    #     "bayes_homing_example_nonadaptive.svg",
+    #     format="svg",
+    #     dpi=300,
+    #     bbox_inches="tight",
+    # )
     plt.show()
 
     # Print final configuration used
