@@ -1,8 +1,7 @@
-from bayes_homing import run_simulation
+from bayes_navigation import run_simulation
 import numpy as np
 import json
 from multiprocessing import Pool, cpu_count
-from functools import partial
 import concurrent.futures
 
 

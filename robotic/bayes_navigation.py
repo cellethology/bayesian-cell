@@ -158,7 +158,7 @@ def run_navigation_simulation(config=None, steps=100):
         if distance_to_target < env.config["target_reach_threshold"]:
             print(f"Target reached in {len(trajectory)} steps!")
             break
-        elif step % 3000 == 0:
+        elif step % 5000 == 0:
             print(f"Distance to target at step {step}: {distance_to_target:.2f}")
 
     return trajectory, env, sigmas
@@ -169,8 +169,11 @@ if __name__ == "__main__":
     example_config = {
         "grid_size": 100,
         "movement_step_size": 0.01,
-        "min_motion_sigma": 0.5,
+        "true_motion_sigma": 0.5,  # Actual noise in robot motion
+        "min_motion_sigma": 1e-10,  # Minimum uncertainty in motion model (D_base)
+        "max_motion_sigma": 0.5,  # Maximum uncertainty in motion model (D_max)
         "measurement_noise_factor": 1e-2,
+        "signal_strength_max": 0.2,
     }
     trajectory, env, sigmas = run_navigation_simulation(
         config=example_config, steps=1000000
@@ -182,7 +185,8 @@ if __name__ == "__main__":
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(8, 4))
 
     # Plot the belief map and trajectory
-    ax1.imshow(np.log(env.belief + 1e-10), cmap="hot", interpolation="nearest")
+    signal_map = env.compute_all_expected_signal(env.true_target_pos)
+    ax1.imshow(signal_map, cmap="hot", interpolation="nearest")
     ax1.plot(trajectory[:, 1], trajectory[:, 0], "b-", label="Robot Path")
     ax1.plot(
         env.true_target_pos[1],
