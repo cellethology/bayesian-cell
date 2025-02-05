@@ -77,7 +77,7 @@ if __name__ == "__main__":
             "measurement_noise_factor": measurement_noise_factor,
             "signal_strength_max": 0.2,
             "signal_decay_exp": 0.3,
-            "movement_step_size": 0.01,
+            "movement_step_size": 0.1,
             "kernel_size": 5,
             "target_reach_threshold": 2.0,
         }
