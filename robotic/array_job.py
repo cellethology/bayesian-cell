@@ -71,8 +71,8 @@ if __name__ == "__main__":
         fixed_config = {
             "grid_size": 100,
             "true_motion_sigma": 0.5,
-            "min_motion_sigma": 1e-5,
-            "max_motion_sigma": 1e-5,
+            "min_motion_sigma": 1e-1,
+            "max_motion_sigma": 1e-1,
             "motion_decay_rate": 4.0,  # Irrelevant when min == max
             "measurement_noise_factor": measurement_noise_factor,
             "signal_strength_max": 0.2,
