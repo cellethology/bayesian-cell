@@ -54,7 +54,7 @@ class BayesianNavigation:
         y = np.arange(self.grid_size)
         xx, yy = np.meshgrid(x, y, indexing="ij")
         distance = np.sqrt((xx - target_pos[0]) ** 2 + (yy - target_pos[1]) ** 2)
-        distance = np.maximum(distance, 0.1)
+        distance = np.maximum(distance, 0.1) # Avoid division by zero
         signal = self.get_expected_signal(distance)
         return signal
 

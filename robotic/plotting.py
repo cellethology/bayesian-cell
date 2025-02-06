@@ -15,7 +15,7 @@ mean_steps_adaptive = []
 std_steps_adaptive = []
 
 for param, data in adaptive_results.items():
-    param_adaptive.append(float(param))
+    param_adaptive.append(0.2/float(param))
     mean_steps_adaptive.append(np.mean(data))
     std_steps_adaptive.append(np.std(data))
 
@@ -24,7 +24,7 @@ mean_steps_fixed = []
 std_steps_fixed = []
 
 for param, data in fixed_results.items():
-    param_fixed.append(float(param))
+    param_fixed.append(0.2/float(param))
     mean_steps_fixed.append(np.mean(data))
     std_steps_fixed.append(np.std(data))
 
@@ -47,13 +47,13 @@ plt.errorbar(
 
 plt.xscale("log")
 plt.yscale("log")
-plt.xlabel("param")
+plt.xlabel("signal noise ratio")
 plt.ylabel("Steps to target")
 plt.legend(frameon=False)  # Remove legend border
 plt.grid(False)  # Remove grid
 plt.gca().spines["top"].set_visible(False)  # Remove top border
 plt.gca().spines["right"].set_visible(False)  # Remove right border
 
-# plt.savefig("adaptive_variance_comparison.svg", format="svg", bbox_inches="tight")
+plt.savefig("adaptive_sigma_comparison.pdf", format="pdf", bbox_inches="tight")
 
 plt.show()

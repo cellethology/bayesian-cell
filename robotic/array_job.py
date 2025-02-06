@@ -55,7 +55,7 @@ class SimulationRunner:
 if __name__ == "__main__":
     # Number of runs for each strategy (each run produces one fixed-sigma and one adaptive-sigma result)
     n_runs = 50  # Number of repeated runs
-    max_steps = 100000000  # Maximum simulation steps
+    max_steps = 10000000  # Maximum simulation steps
 
     # Define the range of measurement_noise_factor values to test
     measurement_noise_factors = np.logspace(-3, -1, num=5)
@@ -71,8 +71,8 @@ if __name__ == "__main__":
         fixed_config = {
             "grid_size": 100,
             "true_motion_sigma": 0.5,
-            "min_motion_sigma": 0.5,
-            "max_motion_sigma": 0.5,
+            "min_motion_sigma": 1e-5,
+            "max_motion_sigma": 1e-5,
             "motion_decay_rate": 4.0,  # Irrelevant when min == max
             "measurement_noise_factor": measurement_noise_factor,
             "signal_strength_max": 0.2,
@@ -84,7 +84,7 @@ if __name__ == "__main__":
 
         # Define the configuration for the adaptive-sigma simulation
         adaptive_config = fixed_config.copy()
-        adaptive_config["min_motion_sigma"] = 1e-5
+        adaptive_config["max_motion_sigma"] = 0.5
 
         # Create a list of SimulationRunner tasks for each seed and measurement_noise_factor
         tasks.extend(
@@ -97,7 +97,7 @@ if __name__ == "__main__":
     # Set up the Submitit executor.
     executor = submitit.AutoExecutor(folder="tmp/submitit_logs")
     executor.update_parameters(
-        timeout_min=240,  # maximum runtime in minutes
+        timeout_min=120,  # maximum runtime in minutes
         gpus_per_node=0,  # number of GPUs (0 if not needed)
         cpus_per_task=1,  # number of CPUs per task
         nodes=1,
@@ -115,7 +115,7 @@ if __name__ == "__main__":
             f"Measurement Noise Factor = {res[0]["fixed_config"]['measurement_noise_factor']}"
         )
 
-    # Organize the results into two dictionaries, one for fixed-sigma and one for adaptive-sigma. For each dictionary, the keys are the measurement noise factors and the values are lists of the number of steps to reach the target for each seed.
+    # Extract the results for plotting
     fixed_results = {mnf: [] for mnf in measurement_noise_factors}
     adaptive_results = {mnf: [] for mnf in measurement_noise_factors}
     for res in results:
