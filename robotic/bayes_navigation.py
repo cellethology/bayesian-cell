@@ -54,7 +54,7 @@ class BayesianNavigation:
         y = np.arange(self.grid_size)
         xx, yy = np.meshgrid(x, y, indexing="ij")
         distance = np.sqrt((xx - target_pos[0]) ** 2 + (yy - target_pos[1]) ** 2)
-        distance = np.maximum(distance, 0.1) # Avoid division by zero
+        distance = np.maximum(distance, 0.1)  # Avoid division by zero
         signal = self.get_expected_signal(distance)
         return signal
 
@@ -168,17 +168,18 @@ if __name__ == "__main__":
     np.random.seed(42)
     example_config = {
         "grid_size": 100,
-        "movement_step_size": 0.02,
-        "true_motion_sigma": 0.5,  # Actual noise in robot motion
-        "min_motion_sigma": 0.5,  # Minimum uncertainty in motion model (D_base)
-        "max_motion_sigma": 0.5,  # Maximum uncertainty in motion model (D_max)
-        "measurement_noise_factor": 0.1,
-        "motion_decay_rate": 4,
+        "true_motion_sigma": 0.5,
+        "min_motion_sigma": 1e-1,
+        "max_motion_sigma": 1e-1,
+        "motion_decay_rate": 4.0,  # Irrelevant when min == max
+        "measurement_noise_factor": 0.06,
         "signal_strength_max": 0.2,
+        "signal_decay_exp": 0.3,
+        "movement_step_size": 0.02,
+        "kernel_size": 5,
+        "target_reach_threshold": 5.0,
     }
-    trajectory, env, sigmas = run_navigation_simulation(
-        config=example_config, steps=1000000
-    )
+    trajectory, env, sigmas = run_navigation_simulation(config=example_config, steps=50)
 
     trajectory = np.array(trajectory)
     sigmas = np.array(sigmas)
@@ -208,4 +209,5 @@ if __name__ == "__main__":
     ax2.set_title("Sigmas Over Time")
 
     plt.tight_layout()
+    plt.savefig("bayes_navigation.pdf", format="pdf", dpi=300)
     plt.show()

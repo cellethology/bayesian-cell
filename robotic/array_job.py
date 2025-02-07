@@ -25,22 +25,22 @@ class SimulationRunner:
         fixed_traj, fixed_env, _ = run_navigation_simulation(
             config=self.fixed_config, steps=self.steps
         )
-        fixed_steps_to_target = len(fixed_traj)
 
         # Reset the seed to ensure the adaptive simulation experiences the same random numbers.
         np.random.seed(self.seed)
         adaptive_traj, adaptive_env, _ = run_navigation_simulation(
             config=self.adaptive_config, steps=self.steps
         )
-        adaptive_steps_to_target = len(adaptive_traj)
 
         # Collect the results
         results = {
             "seed": self.seed,
             "fixed_config": fixed_env.config,
             "adaptive_config": adaptive_env.config,
-            "fixed_steps_to_target": fixed_steps_to_target,
-            "adaptive_steps_to_target": adaptive_steps_to_target,
+            "fixed_steps_to_target": len(fixed_traj),
+            "adaptive_steps_to_target": len(adaptive_traj),
+            "fixed_trajectory": fixed_traj,
+            "adaptive_trajectory": adaptive_traj,
         }
 
         # Save the results to a file named using the seed.
@@ -58,7 +58,7 @@ if __name__ == "__main__":
     max_steps = 4000000  # Maximum simulation steps
 
     # Define the range of measurement_noise_factor values to test
-    measurement_noise_factors = np.logspace(-3, -1, num=5)
+    measurement_noise_factors = np.array([0.06])
 
     # Generate a list of seeds so that each run gets a unique seed.
     seeds = list(range(1, n_runs + 1))
