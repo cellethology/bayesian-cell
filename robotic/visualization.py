@@ -16,30 +16,23 @@ class NavigationVisualizer:
         self.innovations = np.array(innovations)
         self.measurement_variances = np.array(measurement_variances)
     
-    def create_comprehensive_plot(self, figsize=(15, 10)):
-        """Create a comprehensive visualization with all relevant plots."""
+    def create_comprehensive_plot(self, figsize=(12, 9)):
+        """Create a comprehensive visualization with all relevant plots in a balanced 3x3 grid."""
         fig = plt.figure(figsize=figsize)
         
-        # Signal map and trajectory
-        self._plot_signal_map_and_trajectory(fig.add_subplot(241))
+        # Create a 3x3 grid for better balance (using 7 of 9 positions)
+        # Row 1: Navigation overview
+        self._plot_signal_map_and_trajectory(fig.add_subplot(331))
+        self._plot_belief_state(fig.add_subplot(332))
+        self._plot_sigma_evolution(fig.add_subplot(333))
         
-        # Final belief state
-        self._plot_belief_state(fig.add_subplot(242))
+        # Row 2: Measurement and innovation analysis
+        self._plot_measurement_variance(fig.add_subplot(334))
+        self._plot_innovation_timeline(fig.add_subplot(335))
+        self._plot_innovation_histogram(fig.add_subplot(336))
         
-        # Innovation histogram
-        self._plot_innovation_histogram(fig.add_subplot(243))
-        
-        # Motion sigma evolution
-        self._plot_sigma_evolution(fig.add_subplot(244))
-        
-        # Measurement variance plot
-        self._plot_measurement_variance(fig.add_subplot(245))
-        
-        # Innovation line plot
-        self._plot_innovation_timeline(fig.add_subplot(246))
-        
-        # Motion sigma histogram
-        self._plot_sigma_histogram(fig.add_subplot(247))
+        # Row 3: Sigma distribution (centered in bottom row)
+        self._plot_sigma_histogram(fig.add_subplot(338))  # Skip position 337 for centering
         
         plt.tight_layout()
         return fig
@@ -211,13 +204,13 @@ def visualize_simulation_results(env, trajectory, sigmas, innovations, measureme
     visualizer = NavigationVisualizer(env, trajectory, sigmas, innovations, measurement_variances)
     
     if plot_type == "comprehensive":
-        figsize = figsize or (15, 10)
+        figsize = figsize or (12, 9)
         fig = visualizer.create_comprehensive_plot(figsize)
     elif plot_type == "trajectory":
-        figsize = figsize or (8, 8)
+        figsize = figsize or (6, 6)
         fig = visualizer.plot_trajectory_only(figsize)
     elif plot_type == "adaptation":
-        figsize = figsize or (12, 8)
+        figsize = figsize or (10, 6)
         fig = visualizer.plot_adaptation_metrics(figsize)
     else:
         raise ValueError(f"Unknown plot_type: {plot_type}")

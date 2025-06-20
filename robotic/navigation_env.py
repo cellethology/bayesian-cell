@@ -145,25 +145,25 @@ if __name__ == "__main__":
     # Example usage with visualization
     from visualization import visualize_simulation_results
 
-    np.random.seed(5)
+    np.random.seed(22)
     example_config = {
-        "grid_size": 500,
-        "true_process_sigma": 1.4,
-        "initial_process_sigma": 0.8,
+        "grid_size": 100,
+        "true_process_sigma": 0.1,
+        "initial_process_sigma": 0.6,
         "motion_decay_rate": 0.8,
         "signal_strength_max": 2,
-        "signal_decay_exp": 0.3,
+        "signal_decay_exp": 0.5,
         "step_size": 1,
         "kernel_size": 5,
         "adaptive_filtering": False,
-        "adaptive_process_variance": "error_based",
+        "adaptive_process_variance": "exponential",
         "noise_model": "gaussian",
         "noise_std": 0.1,
         "initial_measurement_sigma": 0.1,
     }
 
     trajectory, env, sigmas, innovations, measurement_variances = (
-        run_navigation_simulation(config=example_config, steps=1000, verbose=True)
+        run_navigation_simulation(config=example_config, steps=5000, verbose=True)
     )
 
     # Create comprehensive visualization
