@@ -148,7 +148,7 @@ if save_data == 2
 end
 
 %% simulating cell movement
-disp(param)
+% disp(param)
 parfor ii = 1:nrun
     newparam = param;
     newparam.cellp = startpt(ii,:);
@@ -193,13 +193,15 @@ if isequal(task, 'localization')
     end
     scheme_time = squeeze(sum(posScheme(:,1,:)~=0))/2; %number of minutes elapsed
     schemerate = sum(scheme_time<total_time)/nrun*100;
+    if rununif
+        disp(strcat("uniform success rate = ",num2str(unifrate),"%"))
+    end
+    disp(strcat(receptor," success rate = ",num2str(schemerate),"%"))
     if makeplot
     %plotting
         if rununif
-            disp(strcat("uniform success rate = ",num2str(unifrate),"%"))
             histogram(unif_time,30,'Normalization','probability')
         end
-        disp(strcat(receptor," success rate = ",num2str(schemerate),"%"))
         hold on
         histogram(scheme_time,30,'Normalization','probability')
         hold off
@@ -213,13 +215,15 @@ elseif isequal(task, 'retention')
     end
     scheme_traj = squeeze(posScheme(:,1,:));
     schemerate = squeeze(sum(scheme_traj-1>=3,[1,2]))/numel(scheme_traj)*100;
+    if rununif 
+        disp(strcat('uniform error rate = ',num2str(unifrate),"%"))
+    end
+    disp(strcat(receptor,' error rate = ',num2str(schemerate),"%"))
     if makeplot
         %plotting
-        if rununif
-            disp(strcat('uniform error rate = ',num2str(unifrate),"%"))
+        if rununif 
             histogram(unif_traj,'Normalization','probability')
         end
-        disp(strcat(receptor,' error rate = ',num2str(schemerate),"%"))
         hold on;
         histogram(scheme_traj,'Normalization','probability')
         hold off;

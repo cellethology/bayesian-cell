@@ -1,60 +1,86 @@
-from bayes_navigation import BayesianNavigation
-import matplotlib.pyplot as plt
-
-# Get trajectory from json file
-import json
 import numpy as np
+import matplotlib.pyplot as plt
+from comparative_run import run_comparative_simulation
+from bayes_navigation import BayesianNavigation
 
-with open("tmp/results_seed_7.json", "r") as f:
-    result = json.load(f)
-    fixed_trajectory = np.array(result["fixed_trajectory"])
-    adaptive_trajectory = np.array(result["adaptive_trajectory"])
+# === Configuration ===
+seed = 1
+noise_std = 0.6
+max_steps = 200000
 
-config = {
-    "grid_size": 100,
-    "measurement_noise_factor": 0.06,
-    "signal_strength_max": 0.2,
-    "signal_decay_exp": 0.3,
+base_config = {
+    "true_motion_sigma": 0.6,
+    "initial_process_sigma": 0.6,
+    "motion_decay_rate": 0.4,
+    "signal_strength_max": 5,
+    "signal_decay_exp": 0.05,
+    "step_size": 0.02,
+    "kernel_size": 5,
+    "noise_model": "gaussian",
+    "noise_std": noise_std,
+    "initial_measurement_sigma": noise_std,
 }
 
-env = BayesianNavigation(config)
-fig, ax = plt.subplots(1, 1, figsize=(5, 4))
-# Plot the belief map and trajectory
-signal_map = env.compute_all_expected_signal(env.true_target_pos)
-ax.imshow(signal_map, cmap="hot", interpolation="nearest")
-# add colorbar to the right of the plot with proper size
-cbar = plt.colorbar(ax.imshow(signal_map, cmap="hot", interpolation="nearest"))
-cbar.ax.tick_params(labelsize=8)
-# add title to the colorbar, rotate it 180 degrees, add space between title and colorbar
-cbar.set_label("Expected Signal Strength", rotation=270, labelpad=19, fontsize=12)
+config_labels = [
+    "Fixed process variance",
+    "Adaptive process variance",
+]
 
+# === Run the simulations ===
+configs, results = run_comparative_simulation(seed, base_config, max_steps)
 
-ax.plot(
-    fixed_trajectory[:, 1],
-    fixed_trajectory[:, 0],
-    "tab:orange",
-    label="fixed variance",
-    linewidth=1.5,
+# Extract trajectories
+trajectory_fixed = np.array(results[0])
+trajectory_adaptive = np.array(results[1])
+
+# Print the number of steps to target
+print(f"Number of steps to target for fixed process: {len(trajectory_fixed)}")
+print(f"Number of steps to target for adaptive process: {len(trajectory_adaptive)}")
+
+# === Generate the signal map from a dummy agent ===
+dummy_env = BayesianNavigation(config=base_config)
+signal_map = dummy_env.compute_all_expected_signal(dummy_env.true_target_pos)
+
+target_x, target_y = dummy_env.true_target_pos
+
+# === Plotting ===
+plt.figure(figsize=(4.5, 3.6))
+plt.imshow(signal_map, cmap="Greens", origin="lower")
+cbar = plt.colorbar()
+cbar.set_label("Expected Signal Strength")
+
+# Plot fixed trajectory
+plt.plot(
+    trajectory_fixed[:, 1],
+    trajectory_fixed[:, 0],
+    "-",
+    color="tab:blue",
+    label="Standard KF",
+    linewidth=2,
 )
-ax.plot(
-    adaptive_trajectory[:, 1],
-    adaptive_trajectory[:, 0],
-    "tab:blue",
-    label="adaptive variance",
-    linewidth=1.5,
-)
-ax.plot(
-    env.true_target_pos[1],
-    env.true_target_pos[0],
-    "g*",
-    markersize=15,
-    label="Target",
-)
-ax.plot(fixed_trajectory[0, 1], fixed_trajectory[0, 0], "ws", label="Start")
-# legend with no frame and no background, white text
-ax.legend(frameon=False, loc="upper right", fontsize=9, labelcolor="white")
 
+# Plot adaptive trajectory
+plt.plot(
+    trajectory_adaptive[:, 1],
+    trajectory_adaptive[:, 0],
+    "-",
+    color="tab:orange",
+    label="Signal-aware KF",
+    linewidth=2,
+)
 
+# Add green star for the target
+plt.plot(target_y, target_x, "*", color="tab:pink", markersize=12, label="Target")
+
+# Add white square at the start
+start_x, start_y = trajectory_fixed[0]
+plt.plot(start_y, start_x, "s", color="black", markersize=6, label="Start")
+
+# Formatting
+plt.legend(loc="upper left", fontsize=11, frameon=False)
 plt.tight_layout()
-plt.savefig("bayes_navigation.pdf", format="pdf", dpi=300)
+plt.savefig(
+    "/Users/jerrywang/Thomson Lab Dropbox/Jerry Wang/Apps/Overleaf/bayesian_filter_2024/figure/assets/example_trajectory_overlay.pdf",
+    dpi=300,
+)
 plt.show()
