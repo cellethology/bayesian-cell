@@ -2,11 +2,11 @@ import numpy as np
 import matplotlib.pyplot as plt
 from multiprocessing import Pool
 from tqdm import tqdm
-from bayes_navigation import run_navigation_simulation
+from navigation_env import run_navigation_simulation
 
 
 def run_comparative_simulation(seed, base_config, max_steps, verbose=False):
-    np.random.seed(seed + 1000)
+    np.random.seed(seed)
     all_configs_to_try = [
         {"initial_process_sigma": 0.001, "adaptive_process_variance": "none"},
         {"initial_process_sigma": 2, "adaptive_process_variance": "none"},
