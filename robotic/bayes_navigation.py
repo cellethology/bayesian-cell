@@ -70,6 +70,10 @@ class BayesianNavigation:
             []
         )  # Store predicted innovation variance history
 
+        # For error-based adaptive process variance
+        self.previous_intended_pos = None
+        self.previous_actual_pos = None
+
     def get_optimal_motion_kernel(self, theta_0, adaptive_sigma):
         """
         Returns a 2D Gaussian kernel based on the filter's belief about motion uncertainty (adaptive_sigma).
@@ -101,7 +105,8 @@ class BayesianNavigation:
 
         # Evaluate multivariate Gaussian
         diff = pos - mu
-        inv_cov = np.linalg.inv(cov)
+        # Add regularization to prevent singular matrix
+        inv_cov = np.linalg.inv(cov + np.eye(2) * 1e-6)
         exponent = np.einsum("...i,ij,...j->...", diff, inv_cov, diff)
         kernel = np.exp(-0.5 * exponent)
         kernel /= kernel.sum()
@@ -109,7 +114,7 @@ class BayesianNavigation:
 
     def get_expected_signal(self, xx, yy, target_pos):
         distance = np.sqrt((xx - target_pos[0]) ** 2 + (yy - target_pos[1]) ** 2)
-        distance = np.maximum(distance, 1e-2)  # Avoid division by zero
+        distance = np.maximum(distance, 1e-8)  # Avoid division by zero
         return self.config["signal_strength_max"] * np.exp(
             -self.config["signal_decay_exp"] * distance
         )
@@ -162,8 +167,12 @@ class BayesianNavigation:
 
         A = self.config["signal_strength_max"]
         k = self.config["signal_decay_exp"]
-        decay = np.exp(-k * distance)
 
+        # Ensure distance is never zero
+        if distance < 1e-8:
+            return 0.0, 0.0  # No gradient when at target
+
+        decay = np.exp(-k * distance)
         df_dr = -A * k * decay
         df_dx = df_dr * (dx / distance)
         df_dy = df_dr * (dy / distance)
@@ -288,17 +297,29 @@ class BayesianNavigation:
         elif (
             self.adaptive_process_variance == "error_based" and current_pos is not None
         ):
-            action = self.get_next_intended_action(
-                np.unravel_index(np.argmax(self.belief), self.belief.shape)
-            )
+            # Use error from previous step if available
+            if (
+                self.previous_intended_pos is not None
+                and self.previous_actual_pos is not None
+            ):
+                self.update_process_variance_from_position_error(
+                    self.previous_intended_pos, self.previous_actual_pos
+                )
+
+            # Store intended position for next iteration
+            action = self.get_next_intended_action(current_pos)
             theta_0 = np.arctan2(action[1], action[0])
             intended_dx = self.config["step_size"] * np.cos(theta_0)
             intended_dy = self.config["step_size"] * np.sin(theta_0)
-            intended_pos = (current_pos[0] + intended_dx, current_pos[1] + intended_dy)
-            self.update_process_variance_from_position_error(intended_pos, current_pos)
+            self.previous_intended_pos = (
+                current_pos[0] + intended_dx,
+                current_pos[1] + intended_dy,
+            )
+            self.previous_actual_pos = current_pos
+
             adaptive_sigma = np.sqrt(self.process_variance)
-        else:
-            adaptive_sigma = np.sqrt(self.process_variance)
+        else:  # Default case for "none" or other invalid values
+            adaptive_sigma = self.config["initial_process_sigma"]
 
         kernel = np.exp(-(self.kernel_mat**2) / (2 * adaptive_sigma**2))
         kernel /= kernel.sum()
@@ -400,17 +421,17 @@ if __name__ == "__main__":
     np.random.seed(5)
     example_config = {
         "true_process_sigma": 1,
-        "initial_process_sigma": 1,  # true_process_sigma * step_size
+        "initial_process_sigma": 2,  # true_process_sigma * step_size
         "motion_decay_rate": 0.8,  # Irrelevant when min == max
         "signal_strength_max": 2,
-        "signal_decay_exp": 0.5,
+        "signal_decay_exp": 0.3,
         "step_size": 1,
         "kernel_size": 5,
         "adaptive_filtering": False,
-        "adaptive_process_variance": "none",
+        "adaptive_process_variance": "exponential",
         "noise_model": "gaussian",
-        "noise_std": 0.5,
-        "initial_measurement_sigma": 0.5,
+        "noise_std": 0.01,
+        "initial_measurement_sigma": 0.01,
     }
     trajectory, env, sigmas, innovations, measurement_variances = (
         run_navigation_simulation(config=example_config, steps=100000, verbose=True)
@@ -430,10 +451,8 @@ if __name__ == "__main__":
     signal_map = env.compute_all_expected_signal(env.true_target_pos)
     avg_signal_strength = np.mean(signal_map)
     print(f"Average signal strength over entire space: {avg_signal_strength:.4f}")
-    ax1.imshow(signal_map, cmap="Greens", interpolation="nearest")
-    cbar = plt.colorbar(
-        ax1.imshow(signal_map, cmap="Greens", interpolation="nearest"), ax=ax1
-    )
+    im = ax1.imshow(signal_map, cmap="Greens", interpolation="nearest")
+    cbar = plt.colorbar(im, ax=ax1)
     cbar.set_label("Signal Strength")
     ax1.plot(trajectory[:, 1], trajectory[:, 0], "b-", label="Robot Path")
     ax1.plot(
@@ -505,6 +524,7 @@ if __name__ == "__main__":
     ax5.plot(
         np.ones_like(measurement_variances) * env.config["noise_std"] ** 2,
         "r--",
+        label="True Noise Variance",
     )
     ax5.set_yscale("log")
     ax5.set_xlabel("Time Step")
