@@ -148,18 +148,20 @@ if __name__ == "__main__":
     np.random.seed(22)
     example_config = {
         "grid_size": 100,
-        "true_process_sigma": 0.1,
-        "initial_process_sigma": 0.6,
+        "motion_noise_type": "angular",
+        "angular_noise_sigma": 0.6,
+        "magnitude_noise_sigma": 0.01,
+        "initial_process_sigma": 1,
         "motion_decay_rate": 0.8,
-        "signal_strength_max": 2,
-        "signal_decay_exp": 0.5,
-        "step_size": 1,
+        "signal_strength_max": 10,
+        "signal_decay_exp": 0.3,
+        "step_size": 0.1,
         "kernel_size": 5,
         "adaptive_filtering": False,
         "adaptive_process_variance": "exponential",
         "noise_model": "gaussian",
-        "noise_std": 0.1,
-        "initial_measurement_sigma": 0.1,
+        "noise_std": 0.6,
+        "initial_measurement_sigma": 0.6,
     }
 
     trajectory, env, sigmas, innovations, measurement_variances = (

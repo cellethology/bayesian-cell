@@ -309,15 +309,20 @@ if __name__ == "__main__":
 
     # Define base configuration (shared parameters)
     base_config = {
-        "true_process_sigma": 0.1,
-        "initial_process_sigma": 0.1,
-        "noise_model": "poisson",
+        "grid_size": 100,
+        "motion_noise_type": "angular",
+        "angular_noise_sigma": 0.6,
+        "magnitude_noise_sigma": 0.01,
+        "initial_process_sigma": 1,
+        "motion_decay_rate": 0.8,
+        "signal_strength_max": 10,
+        "signal_decay_exp": 0.2,
+        "step_size": 0.1,
+        "kernel_size": 5,
+        "adaptive_filtering": False,
+        "noise_model": "gaussian",
         "noise_std": 0.1,
         "initial_measurement_sigma": 0.1,
-        "signal_strength_max": 2,
-        "signal_decay_exp": 0.5,
-        "step_size": 1,
-        "grid_size": 100,
     }
 
     # Define configurations to compare
@@ -335,8 +340,8 @@ if __name__ == "__main__":
     results, plots = quick_compare(
         configs_to_compare,
         base_config=base_config,
-        n_runs=30,  # Small number for demo
-        max_steps=50000,
+        n_runs=20,  # Small number for demo
+        max_steps=500000,
     )
 
     plt.show()
