@@ -28,6 +28,8 @@ class BayesianNavigation:
             "adaptive_process_variance": "error_based",  # "error_based" or "exponential"
             "noise_model": "poisson",
             "noise_std": 1,
+            "motion_noise_model": "isotropic",  # "isotropic" or "angular"
+            "angular_noise_std": 0.1,  # Standard deviation for angular noise (radians)
         }
         if config is not None:
             self.config.update(config)
@@ -322,7 +324,7 @@ class BayesianNavigation:
     def update_position(self, true_pos, action):
         """
         Update the true state (position) of the robot based on the intended action.
-        Uses an isotropic Gaussian motion model with standard deviation true_process_sigma.
+        Supports both isotropic Gaussian and angular noise models.
         """
         s = self.config["step_size"]
         sigma = self.config["true_process_sigma"]
@@ -335,9 +337,30 @@ class BayesianNavigation:
         dx = s * direction[0]
         dy = s * direction[1]
 
-        # Add isotropic Gaussian noise
-        noisy_dx = dx + normal(0, sigma)
-        noisy_dy = dy + normal(0, sigma)
+        if self.config["motion_noise_model"] == "isotropic":
+            # Add isotropic Gaussian noise
+            noisy_dx = dx + normal(0, sigma)
+            noisy_dy = dy + normal(0, sigma)
+        elif self.config["motion_noise_model"] == "angular":
+            # Add angular noise: noise in direction (angle) and magnitude
+            intended_angle = np.arctan2(dy, dx)
+            intended_magnitude = np.sqrt(dx**2 + dy**2)
+
+            # Add angular noise
+            angular_noise = normal(0, self.config["angular_noise_std"])
+            noisy_angle = intended_angle + angular_noise
+
+            # Add small amount of magnitude noise
+            magnitude_noise = normal(0, sigma * 0.1)  # Smaller magnitude noise
+            noisy_magnitude = intended_magnitude + magnitude_noise
+
+            # Convert back to Cartesian coordinates
+            noisy_dx = noisy_magnitude * np.cos(noisy_angle)
+            noisy_dy = noisy_magnitude * np.sin(noisy_angle)
+        else:
+            raise ValueError(
+                f"Invalid motion noise model: {self.config['motion_noise_model']}"
+            )
 
         # Compute new position
         new_x = np.clip(true_pos[0] + noisy_dx, 0, self.grid_size - 1)
@@ -400,17 +423,19 @@ if __name__ == "__main__":
     np.random.seed(5)
     example_config = {
         "true_process_sigma": 1,
-        "initial_process_sigma": 1,  # true_process_sigma * step_size
+        "initial_process_sigma": 0.6,  # true_process_sigma * step_size
         "motion_decay_rate": 0.8,  # Irrelevant when min == max
         "signal_strength_max": 2,
         "signal_decay_exp": 0.5,
         "step_size": 1,
         "kernel_size": 5,
         "adaptive_filtering": False,
-        "adaptive_process_variance": "none",
+        "adaptive_process_variance": "exponential",
         "noise_model": "gaussian",
-        "noise_std": 0.5,
-        "initial_measurement_sigma": 0.5,
+        "noise_std": 0.1,
+        "initial_measurement_sigma": 0.1,
+        "motion_noise_model": "angular",  # Use angular noise instead of isotropic
+        "angular_noise_std": 0.6,  # Angular noise standard deviation
     }
     trajectory, env, sigmas, innovations, measurement_variances = (
         run_navigation_simulation(config=example_config, steps=100000, verbose=True)
