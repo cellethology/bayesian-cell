@@ -20,20 +20,20 @@ class NavigationEnvironment:
             "initial_belief": None,
             "true_target_pos": None,
             "true_process_sigma": 0.5,
-            "min_motion_sigma": 0.001,
+            "min_motion_sigma": 0.1,
             "motion_decay_rate": 8,
             "signal_strength_max": 1,
             "signal_decay_exp": 0.3,
             "step_size": 0.1,
             "kernel_size": 5,
-            "target_reach_threshold": 5.0,
+            "target_reach_threshold": 2.0,
             "innovation_window_size": 20,
             "adaptation_rate": 0.4,
             "initial_measurement_sigma": 0.5,
             "initial_process_sigma": 0.1,
             "min_allowed_variance": 1e-6,
             "adaptive_filtering": False,
-            "adaptive_process_variance": "error_based",
+            "adaptive_process_variance": "none",
             "noise_model": "poisson",
             "noise_std": 1,
         }
@@ -145,27 +145,27 @@ if __name__ == "__main__":
     # Example usage with visualization
     from visualization import visualize_simulation_results
 
-    np.random.seed(22)
+    np.random.seed(2)
     example_config = {
         "grid_size": 100,
         "motion_noise_type": "angular",
-        "angular_noise_sigma": 0.6,
-        "magnitude_noise_sigma": 0.01,
-        "initial_process_sigma": 1,
+        "angular_noise_sigma": 0.5,
+        "magnitude_noise_sigma": 0.0,
+        "initial_process_sigma": 0.5,
         "motion_decay_rate": 0.8,
-        "signal_strength_max": 10,
+        "signal_strength_max": 0.2,
         "signal_decay_exp": 0.3,
-        "step_size": 0.1,
+        "step_size": 0.2,
         "kernel_size": 5,
         "adaptive_filtering": False,
-        "adaptive_process_variance": "exponential",
+        "adaptive_process_variance": "none",
         "noise_model": "gaussian",
-        "noise_std": 0.6,
-        "initial_measurement_sigma": 0.6,
+        "noise_std": 0.06,
+        "initial_measurement_sigma": 0.06,
     }
 
     trajectory, env, sigmas, innovations, measurement_variances = (
-        run_navigation_simulation(config=example_config, steps=5000, verbose=True)
+        run_navigation_simulation(config=example_config, steps=50000, verbose=True)
     )
 
     # Create comprehensive visualization

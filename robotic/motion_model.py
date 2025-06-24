@@ -28,6 +28,9 @@ class MotionModel:
 
         # Random number generator for efficient batch processing
         self.random_gen = RandomBatchGenerator()
+        
+        # Flag to use direct random calls instead of batch generator (for testing)
+        self.use_direct_random = False
 
         # Adaptive process variance tracking
         self.process_variance = config["initial_process_sigma"] ** 2
@@ -94,6 +97,15 @@ class MotionModel:
 
         return kernel
 
+    def get_simple_motion_kernel(self, adaptive_sigma):
+        """
+        Simple isotropic Gaussian motion kernel (similar to old implementation).
+        Returns a 2D Gaussian kernel with uniform uncertainty in all directions.
+        """
+        kernel = np.exp(-(self.kernel_mat**2) / (2 * adaptive_sigma**2))
+        kernel /= kernel.sum()
+        return kernel
+
     def get_adaptive_motion_sigma(self, signal_strength):
         """
         Calculate motion model uncertainty based on signal strength.
@@ -135,12 +147,19 @@ class MotionModel:
             magnitude = np.sqrt(dx**2 + dy**2)
 
             # Add angular noise (larger) and magnitude noise (smaller)
-            angular_sigma = self.config.get("angular_noise_sigma", 0.3)
-            magnitude_sigma = self.config.get("magnitude_noise_sigma", 0.1)
+            angular_sigma = self.config.get("angular_noise_sigma")
+            magnitude_sigma = self.config.get("magnitude_noise_sigma")
 
-            random_vals = self.random_gen.get_batch(2)
-            noisy_theta = theta + random_vals[0] * angular_sigma
-            noisy_magnitude = magnitude + random_vals[1] * magnitude_sigma
+            if self.use_direct_random:
+                # Use direct random calls to match old implementation
+                from numpy.random import normal
+                noisy_theta = theta + normal(0, angular_sigma)
+                noisy_magnitude = magnitude + normal(0, magnitude_sigma)
+            else:
+                # Use batch generator (original behavior)
+                random_vals = self.random_gen.get_batch(2)
+                noisy_theta = theta + random_vals[0] * angular_sigma
+                noisy_magnitude = magnitude + random_vals[1] * magnitude_sigma
 
             # Convert back to Cartesian coordinates
             noisy_dx = noisy_magnitude * np.cos(noisy_theta)
@@ -148,9 +167,16 @@ class MotionModel:
         else:
             # Default isotropic Gaussian noise
             sigma = self.config["true_process_sigma"]
-            random_vals = self.random_gen.get_batch(2) * sigma
-            noisy_dx = dx + random_vals[0]
-            noisy_dy = dy + random_vals[1]
+            if self.use_direct_random:
+                # Use direct random calls to match old implementation
+                from numpy.random import normal
+                noisy_dx = dx + normal(0, sigma)
+                noisy_dy = dy + normal(0, sigma)
+            else:
+                # Use batch generator (original behavior)
+                random_vals = self.random_gen.get_batch(2) * sigma
+                noisy_dx = dx + random_vals[0]
+                noisy_dy = dy + random_vals[1]
 
         # Compute new position
         new_x = np.clip(true_pos[0] + noisy_dx, 0, self.grid_size - 1)
