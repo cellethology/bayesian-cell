@@ -86,16 +86,9 @@ class BayesianFilter:
 
     def motion_update(self, current_signal, current_pos, adaptive_process_variance):
         """Apply motion update to belief state."""
-        if adaptive_process_variance == "exponential":
+        if adaptive_process_variance:  # True means exponential adaptation
             adaptive_sigma = self.motion_model.get_adaptive_motion_sigma(current_signal)
-        elif adaptive_process_variance == "error_based" and current_pos is not None:
-            # Store intended position for next iteration (before motion happens)
-            action = self.motion_model.get_next_intended_action(
-                current_pos, self.belief
-            )
-            self.motion_model.store_intended_position(current_pos, action)
-            adaptive_sigma = np.sqrt(self.motion_model.process_variance)
-        else:  # Default case for "none" or other invalid values
+        else:  # False means no adaptation
             adaptive_sigma = self.config["process_sigma_estimate"]
 
         kernel = self.motion_model.get_simple_motion_kernel(adaptive_sigma)

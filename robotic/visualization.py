@@ -23,19 +23,16 @@ class NavigationVisualizer:
 
         # Create a 3x3 grid for better balance (using 7 of 9 positions)
         # Row 1: Navigation overview
-        self._plot_signal_map_and_trajectory(fig.add_subplot(331))
-        self._plot_belief_state(fig.add_subplot(332))
-        self._plot_sigma_evolution(fig.add_subplot(333))
+        self._plot_signal_map_and_trajectory(fig.add_subplot(231))
+        self._plot_belief_state(fig.add_subplot(232))
+        self._plot_sigma_evolution(fig.add_subplot(233))
 
         # Row 2: Measurement and innovation analysis
-        self._plot_measurement_variance(fig.add_subplot(334))
-        self._plot_innovation_timeline(fig.add_subplot(335))
-        self._plot_innovation_histogram(fig.add_subplot(336))
+        self._plot_measurement_variance(fig.add_subplot(234))
+        self._plot_innovation_histogram(fig.add_subplot(235))
 
         # Row 3: Sigma distribution (centered in bottom row)
-        self._plot_sigma_histogram(
-            fig.add_subplot(338)
-        )  # Skip position 337 for centering
+        self._plot_sigma_histogram(fig.add_subplot(236))
 
         plt.tight_layout()
         return fig

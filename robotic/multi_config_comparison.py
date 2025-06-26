@@ -159,13 +159,16 @@ class MultiConfigComparison:
             mean_signal_std = config_data["mean_signal"].std()
             print(f"  Mean Signal: {mean_signal_avg:.4f} ± {mean_signal_std:.4f}")
 
-    def create_comparison_plots(self, df: pd.DataFrame, figsize: tuple = (12, 5)):
+    def create_comparison_plots(
+        self, df: pd.DataFrame, figsize: tuple = (12, 5), log_scale: bool = False
+    ):
         """
         Create comparison plots for success rate and completion time.
 
         Args:
             df: Results DataFrame from run_comparison()
             figsize: Figure size
+            log_scale: Whether to use log scale for the completion time plot
         """
         fig, (ax1, ax2) = plt.subplots(1, 2, figsize=figsize)
 
@@ -212,6 +215,11 @@ class MultiConfigComparison:
             ax2.set_ylabel("Steps to Target")
             ax2.set_title("Completion Time (Successful Runs)")
             ax2.grid(True, alpha=0.3)
+
+            # Apply log scale if requested
+            if log_scale:
+                ax2.set_yscale("log")
+                ax2.set_ylabel("Steps to Target (log scale)")
         else:
             ax2.text(
                 0.5,
@@ -368,6 +376,7 @@ def quick_compare(
     base_config: Optional[Dict] = None,
     n_runs: int = 10,
     max_steps: int = 5000,
+    log_scale: bool = False,
     **kwargs,
 ):
     """
@@ -378,6 +387,7 @@ def quick_compare(
         base_config: Base configuration
         n_runs: Number of runs per configuration
         max_steps: Maximum steps per simulation
+        log_scale: Whether to use log scale for completion time plot
         **kwargs: Additional arguments for run_comparison()
 
     Returns:
@@ -389,7 +399,7 @@ def quick_compare(
         comparison.add_config(name, config)
 
     results = comparison.run_comparison(n_runs=n_runs, max_steps=max_steps, **kwargs)
-    plots = comparison.create_comparison_plots(results)
+    plots = comparison.create_comparison_plots(results, log_scale=log_scale)
 
     return results, plots
 
@@ -402,26 +412,23 @@ if __name__ == "__main__":
     base_config = {
         "grid_size": 100,
         "motion_noise_type": "isotropic",
-        "process_sigma": 0.4,
-        "process_sigma_estimate": 0.4,
-        "signal_max": 10,
-        "signal_decay": 0.04,
+        "process_sigma": 0.2,
+        "signal_max": 5,
+        "signal_decay": 0.05,
         "step_size": 0.2,
         "kernel_size": 5,
-        "adaptive_filtering": True,
+        "adaptive_filtering": False,
         "noise_model": "poisson",
-        "noise_estimate": 0.3,  # standard deviation
+        # process_sigma_estimate and noise_estimate will be set intelligently by default
     }
 
     # Define configurations to compare
     configs_to_compare = {
         "No Adaptation": {
-            "adaptive_process_variance": "none",
-            "adaptive_filtering": True,
+            "adaptive_process_variance": False,
         },
         "Exponential": {
-            "adaptive_process_variance": "exponential",
-            "adaptive_rate": 0.8,
+            "adaptive_process_variance": True,
         },
     }
 
@@ -430,8 +437,8 @@ if __name__ == "__main__":
     for name, config in configs_to_compare.items():
         comparison.add_config(name, config)
 
-    results = comparison.run_comparison(n_runs=500, max_steps=500000)
-    plots = comparison.create_comparison_plots(results)
+    results = comparison.run_comparison(n_runs=200, max_steps=2000000)
+    plots = comparison.create_comparison_plots(results, log_scale=True)
 
     # Perform paired t-test
     test_results = comparison.perform_paired_ttest(
