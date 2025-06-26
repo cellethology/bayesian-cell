@@ -50,7 +50,11 @@ class NavigationVisualizer:
         cbar = plt.colorbar(im, ax=ax)
         cbar.set_label("Signal Strength")
         print(f"Mean signal strength: {np.mean(signal_map):.3f}")
-        print(f"Noise level: {self.env.config['noise_std']:.3f}")
+        if self.env.config["noise_model"] == "poisson":
+            # standard deviation is equal to the sqrt of the mean
+            print(f"Noise level: {np.sqrt(np.mean(signal_map)):.3f}")
+        else:
+            print(f"Noise level: {self.env.config['noise_std']:.3f}")
 
         ax.plot(self.trajectory[:, 1], self.trajectory[:, 0], "b-", label="Robot Path")
         ax.plot(

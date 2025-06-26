@@ -11,6 +11,7 @@ from navigation_env import run_navigation_simulation
 import pandas as pd
 from typing import Dict, Any, Optional
 import os
+from scipy import stats
 
 
 def run_single_config_simulation(args):
@@ -230,6 +231,136 @@ class MultiConfigComparison:
         df.to_csv(filename, index=False)
         print(f"Results exported to {filename}")
 
+    def perform_paired_ttest(
+        self,
+        df: pd.DataFrame,
+        config1: str,
+        config2: str,
+        metric: str = "steps_to_target",
+    ):
+        """
+        Perform paired t-test between two configurations using the same seeds.
+
+        Args:
+            df: Results DataFrame from run_comparison()
+            config1: Name of first configuration (baseline)
+            config2: Name of second configuration (comparison)
+            metric: Metric to compare (default: "steps_to_target")
+
+        Returns:
+            dict: Test results including statistic, p-value, and interpretation
+        """
+        # Get data for both configurations
+        data1 = df[df["config_name"] == config1].sort_values("seed")
+        data2 = df[df["config_name"] == config2].sort_values("seed")
+
+        # Ensure we have the same seeds for pairing
+        common_seeds = set(data1["seed"]) & set(data2["seed"])
+        if len(common_seeds) == 0:
+            raise ValueError(f"No common seeds found between {config1} and {config2}")
+
+        # Filter to common seeds and sort by seed
+        data1_paired = data1[data1["seed"].isin(common_seeds)].sort_values("seed")
+        data2_paired = data2[data2["seed"].isin(common_seeds)].sort_values("seed")
+
+        # Extract the metric values
+        values1 = data1_paired[metric].values
+        values2 = data2_paired[metric].values
+
+        # Perform paired t-test
+        # H0: mean difference = 0
+        # H1: config2 has lower values than config1 (one-tailed test)
+        statistic, p_value_two_tailed = stats.ttest_rel(values1, values2)
+
+        # For one-tailed test (config2 < config1), divide p-value by 2 if statistic > 0
+        p_value_one_tailed = (
+            p_value_two_tailed / 2 if statistic > 0 else 1 - (p_value_two_tailed / 2)
+        )
+
+        # Calculate effect size (Cohen's d for paired samples)
+        differences = values1 - values2
+        mean_diff = np.mean(differences)
+        std_diff = np.std(differences, ddof=1)
+        cohens_d = mean_diff / std_diff if std_diff > 0 else 0
+
+        # Summary statistics
+        mean1 = np.mean(values1)
+        mean2 = np.mean(values2)
+        std1 = np.std(values1, ddof=1)
+        std2 = np.std(values2, ddof=1)
+
+        results = {
+            "config1": config1,
+            "config2": config2,
+            "metric": metric,
+            "n_pairs": len(common_seeds),
+            "mean1": mean1,
+            "std1": std1,
+            "mean2": mean2,
+            "std2": std2,
+            "mean_difference": mean_diff,
+            "std_difference": std_diff,
+            "t_statistic": statistic,
+            "p_value_two_tailed": p_value_two_tailed,
+            "p_value_one_tailed": p_value_one_tailed,
+            "cohens_d": cohens_d,
+            "significant_two_tailed": p_value_two_tailed < 0.05,
+            "significant_one_tailed": p_value_one_tailed < 0.05,
+        }
+
+        return results
+
+    def print_ttest_results(self, test_results: dict):
+        """Print formatted t-test results."""
+        print("\n" + "=" * 60)
+        print("PAIRED T-TEST RESULTS")
+        print("=" * 60)
+        print(
+            f"Comparing: {test_results['config2']} vs {test_results['config1']} (baseline)"
+        )
+        print(f"Metric: {test_results['metric']}")
+        print(f"Number of paired observations: {test_results['n_pairs']}")
+        print()
+        print("Summary Statistics:")
+        print(
+            f"  {test_results['config1']}: {test_results['mean1']:.2f} ± {test_results['std1']:.2f}"
+        )
+        print(
+            f"  {test_results['config2']}: {test_results['mean2']:.2f} ± {test_results['std2']:.2f}"
+        )
+        print(
+            f"  Mean difference: {test_results['mean_difference']:.2f} ± {test_results['std_difference']:.2f}"
+        )
+        print()
+        print("Test Results:")
+        print(f"  t-statistic: {test_results['t_statistic']:.4f}")
+        print(f"  p-value (two-tailed): {test_results['p_value_two_tailed']:.6f}")
+        print(f"  p-value (one-tailed): {test_results['p_value_one_tailed']:.6f}")
+        print(f"  Cohen's d (effect size): {test_results['cohens_d']:.4f}")
+        print()
+        print("Interpretation:")
+        if test_results["significant_one_tailed"]:
+            print(
+                f"  ✓ {test_results['config2']} has significantly LOWER {test_results['metric']} than {test_results['config1']} (p < 0.05, one-tailed)"
+            )
+        else:
+            print(
+                f"  ✗ No significant difference found (p = {test_results['p_value_one_tailed']:.4f} >= 0.05, one-tailed)"
+            )
+
+        # Effect size interpretation
+        abs_d = abs(test_results["cohens_d"])
+        if abs_d < 0.2:
+            effect_size = "negligible"
+        elif abs_d < 0.5:
+            effect_size = "small"
+        elif abs_d < 0.8:
+            effect_size = "medium"
+        else:
+            effect_size = "large"
+        print(f"  Effect size: {effect_size} (|d| = {abs_d:.3f})")
+        print("=" * 60)
+
 
 # Convenience function for quick comparisons
 def quick_compare(
@@ -271,24 +402,22 @@ if __name__ == "__main__":
     base_config = {
         "grid_size": 100,
         "motion_noise_type": "isotropic",
-        "process_sigma": 0.2,
-        # "angular_noise_sigma": 0.3,
-        # "magnitude_noise_sigma": 0.3,
-        "process_sigma_estimate": 0.2,
+        "process_sigma": 0.4,
+        "process_sigma_estimate": 0.4,
         "signal_max": 10,
-        "signal_decay": 0.02,
+        "signal_decay": 0.04,
         "step_size": 0.2,
         "kernel_size": 5,
-        "adaptive_filtering": False,
+        "adaptive_filtering": True,
         "noise_model": "poisson",
-        "noise_std": 0.06,
-        "measurement_sigma_estimate": 0.01,
+        "noise_estimate": 0.3,  # standard deviation
     }
 
     # Define configurations to compare
     configs_to_compare = {
         "No Adaptation": {
             "adaptive_process_variance": "none",
+            "adaptive_filtering": True,
         },
         "Exponential": {
             "adaptive_process_variance": "exponential",
@@ -296,12 +425,21 @@ if __name__ == "__main__":
         },
     }
 
-    # Quick comparison
-    results, plots = quick_compare(
-        configs_to_compare,
-        base_config=base_config,
-        n_runs=100,  # Small number for demo
-        max_steps=500000,
+    # Run comparison
+    comparison = MultiConfigComparison(base_config)
+    for name, config in configs_to_compare.items():
+        comparison.add_config(name, config)
+
+    results = comparison.run_comparison(n_runs=500, max_steps=500000)
+    plots = comparison.create_comparison_plots(results)
+
+    # Perform paired t-test
+    test_results = comparison.perform_paired_ttest(
+        results,
+        config1="No Adaptation",
+        config2="Exponential",
+        metric="steps_to_target",
     )
+    comparison.print_ttest_results(test_results)
 
     plt.show()

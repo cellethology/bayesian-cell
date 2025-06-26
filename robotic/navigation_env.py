@@ -16,6 +16,7 @@ class NavigationEnvironment:
         # Set up configuration with defaults
         self.config = {
             "grid_size": 100,
+            "motion_noise_type": "isotropic",
             "initial_belief": None,
             "true_target_pos": None,
             "process_sigma": 0.5,
@@ -28,7 +29,7 @@ class NavigationEnvironment:
             "target_reach_threshold": 2.0,
             "innovation_window_size": 20,
             "adaptation_rate": 0.4,
-            "measurement_sigma_estimate": 0.5,
+            "noise_estimate": 0.5,
             "process_sigma_estimate": 0.1,
             "min_allowed_variance": 1e-6,
             "adaptive_filtering": False,
@@ -39,6 +40,9 @@ class NavigationEnvironment:
 
         if config is not None:
             self.config.update(config)
+
+        if self.config["noise_model"] == "poisson":
+            self.config.pop("noise_std")
 
         # Set up target position
         if self.config["true_target_pos"] is None:
@@ -150,19 +154,17 @@ if __name__ == "__main__":
     np.random.seed(1)
     example_config = {
         "grid_size": 100,
-        "motion_noise_type": "isotropic",
-        "process_sigma": 0.5,
-        "process_sigma_estimate": 0.5,
+        "process_sigma": 0.4,
+        "process_sigma_estimate": 0.4,
         "adaptive_rate": 0.8,
         "signal_max": 10,
-        "signal_decay": 0.02,
+        "signal_decay": 0.04,
         "step_size": 0.2,
         "kernel_size": 5,
-        "adaptive_filtering": False,
+        "adaptive_filtering": True,
         "adaptive_process_variance": "none",
-        "noise_model": "gaussian",
-        "noise_std": 40,
-        "measurement_sigma_estimate": 40,
+        "noise_model": "poisson",
+        "noise_estimate": 0.3,  # standard deviation
     }
 
     trajectory, env, sigmas, innovations, measurement_variances = (

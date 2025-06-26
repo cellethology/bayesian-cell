@@ -18,7 +18,7 @@ base_config = {
     "kernel_size": 5,
     "noise_model": "gaussian",
     "noise_std": noise_std,
-    "measurement_sigma_estimate": noise_std,
+    "noise_estimate": noise_std,
 }
 
 config_labels = [

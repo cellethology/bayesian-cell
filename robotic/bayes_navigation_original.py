@@ -24,7 +24,7 @@ class BayesianNavigation:
             "target_reach_threshold": 5.0,
             "innovation_window_size": 20,  # Size of window for innovation statistics
             "adaptation_rate": 0.4,  # Rate of adaptation for measurement and process noise
-            "measurement_sigma_estimate": 0.5,  # Initial estimate of measurement noise
+            "noise_estimate": 0.5,  # Initial estimate of measurement noise
             "process_sigma_estimate": 0.1,  # Initial estimate of process noise
             "min_allowed_variance": 1e-6,  # Minimum allowed variance to prevent numerical issues
             "adaptive_filtering": False,  # Enable adaptive filtering
@@ -72,7 +72,7 @@ class BayesianNavigation:
 
         # Adaptive Kalman Filter parameters
         self.adaptive_filtering = self.config["adaptive_filtering"]
-        self.measurement_variance = self.config["measurement_sigma_estimate"] ** 2
+        self.measurement_variance = self.config["noise_estimate"] ** 2
         self.process_variance = self.config["process_sigma_estimate"] ** 2
 
         # Use deque for better performance instead of lists
@@ -523,7 +523,7 @@ if __name__ == "__main__":
         "adaptive_process_variance": "none",
         "noise_model": "gaussian",
         "noise_std": 0.1,
-        "measurement_sigma_estimate": 0.1,
+        "noise_estimate": 0.1,
     }
     trajectory, env, sigmas, innovations, measurement_variances = (
         run_navigation_simulation(config=example_config, steps=100000, verbose=True)

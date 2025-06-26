@@ -31,7 +31,7 @@ if __name__ == "__main__":
     for noise_idx, noise_std in enumerate(tqdm(noise_values, desc="Running SNR sweep")):
         config = base_config.copy()
         config["noise_std"] = noise_std
-        config["measurement_sigma_estimate"] = noise_std
+        config["noise_estimate"] = noise_std
         results = run_parallel_comparative_runs(
             config, n_pairs=n_repeats, max_steps=max_steps, verbose=False
         )

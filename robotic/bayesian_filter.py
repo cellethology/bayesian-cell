@@ -27,7 +27,7 @@ class BayesianFilter:
 
         # Adaptive Kalman Filter parameters
         self.adaptive_filtering = config["adaptive_filtering"]
-        self.measurement_variance = config["measurement_sigma_estimate"] ** 2
+        self.measurement_variance = config["noise_estimate"] ** 2
 
         # Use deque for better performance instead of lists
         window_size = config["innovation_window_size"]

@@ -24,7 +24,6 @@ class MotionModel:
 
 
         # Adaptive process variance tracking
-        self.process_variance = config["process_sigma_estimate"] ** 2
         self.previous_intended_pos = None
 
     def get_optimal_motion_kernel(self, theta_0, adaptive_sigma):
@@ -152,24 +151,4 @@ class MotionModel:
         self.previous_intended_pos = (
             current_pos[0] + intended_dx,
             current_pos[1] + intended_dy,
-        )
-
-    def update_process_variance_from_motion_error(self, actual_pos_after_motion):
-        """
-        Update process variance based on observed motion error.
-        Compares actual position after motion with intended position.
-        """
-        if self.previous_intended_pos is None:
-            return  # No previous intended position to compare with
-
-        # Calculate error between intended and actual position
-        dx = actual_pos_after_motion[0] - self.previous_intended_pos[0]
-        dy = actual_pos_after_motion[1] - self.previous_intended_pos[1]
-        observed_error_sq = dx**2 + dy**2
-
-        adaptation_rate = self.config["adaptation_rate"]
-        self.process_variance = (
-            1 - adaptation_rate
-        ) * self.process_variance + adaptation_rate * max(
-            observed_error_sq, self.config["min_allowed_variance"]
         )

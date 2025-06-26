@@ -52,7 +52,7 @@ if __name__ == "__main__":
         "adaptive_process_variance": "none",
         "noise_model": "gaussian",
         "noise_std": 0.5,
-        "measurement_sigma_estimate": 0.5,
+        "noise_estimate": 0.5,
     }
     # Prepare labels
     config_labels = [
