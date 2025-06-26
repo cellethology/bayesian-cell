@@ -10,15 +10,15 @@ max_steps = 200000
 
 base_config = {
     "true_motion_sigma": 0.6,
-    "initial_process_sigma": 0.6,
-    "motion_decay_rate": 0.4,
-    "signal_strength_max": 5,
-    "signal_decay_exp": 0.05,
+    "process_sigma_estimate": 0.6,
+    "adaptive_rate": 0.4,
+    "signal_max": 5,
+    "signal_decay": 0.05,
     "step_size": 0.02,
     "kernel_size": 5,
     "noise_model": "gaussian",
     "noise_std": noise_std,
-    "initial_measurement_sigma": noise_std,
+    "measurement_sigma_estimate": noise_std,
 }
 
 config_labels = [

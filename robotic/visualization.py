@@ -46,9 +46,11 @@ class NavigationVisualizer:
             self.env.true_target_pos
         )
 
-        im = ax.imshow(signal_map, cmap="hot", interpolation="nearest")
+        im = ax.imshow(signal_map, cmap="Greens", interpolation="nearest")
         cbar = plt.colorbar(im, ax=ax)
         cbar.set_label("Signal Strength")
+        print(f"Mean signal strength: {np.mean(signal_map):.3f}")
+        print(f"Noise level: {self.env.config['noise_std']:.3f}")
 
         ax.plot(self.trajectory[:, 1], self.trajectory[:, 0], "b-", label="Robot Path")
         ax.plot(

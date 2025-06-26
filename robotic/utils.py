@@ -41,21 +41,3 @@ class GridCache:
         return np.maximum(distance, 1e-1)  # Avoid division by zero
 
 
-class RandomBatchGenerator:
-    """Efficient batch generation of random numbers."""
-
-    def __init__(self, buffer_size=1000):
-        self.buffer_size = buffer_size
-        self.buffer = None
-        self.index = 0
-
-    def get_batch(self, count=2):
-        """Get random numbers from pre-generated batch for better performance."""
-        if self.buffer is None or self.index + count > len(self.buffer):
-            # Regenerate buffer
-            self.buffer = np.random.normal(0, 1, self.buffer_size)
-            self.index = 0
-
-        result = self.buffer[self.index : self.index + count]
-        self.index += count
-        return result

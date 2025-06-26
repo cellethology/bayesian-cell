@@ -7,11 +7,11 @@ MEAN_SIGNAL_STRENGTH = 0.8  # TODO: hard coded for now, need to change
 
 if __name__ == "__main__":
     base_config = {
-        "true_process_sigma": 1,
-        "initial_process_sigma": 0.0001,
-        "motion_decay_rate": 0.8,
-        "signal_strength_max": 1,
-        "signal_decay_exp": 0.2,
+        "process_sigma": 1,
+        "process_sigma_estimate": 0.0001,
+        "adaptive_rate": 0.8,
+        "signal_max": 1,
+        "signal_decay": 0.2,
         "step_size": 1,
         "kernel_size": 5,
         "noise_model": "gaussian",
@@ -31,7 +31,7 @@ if __name__ == "__main__":
     for noise_idx, noise_std in enumerate(tqdm(noise_values, desc="Running SNR sweep")):
         config = base_config.copy()
         config["noise_std"] = noise_std
-        config["initial_measurement_sigma"] = noise_std
+        config["measurement_sigma_estimate"] = noise_std
         results = run_parallel_comparative_runs(
             config, n_pairs=n_repeats, max_steps=max_steps, verbose=False
         )

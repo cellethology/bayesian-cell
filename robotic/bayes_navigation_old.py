@@ -13,10 +13,10 @@ class BayesianNavigation:
             "true_motion_sigma": 0.5,  # Actual noise in robot motion
             "min_motion_sigma": 0.1,  # Minimum uncertainty in motion model (D_base)
             "max_motion_sigma": 0.5,  # Maximum uncertainty in motion model (D_max)
-            "motion_decay_rate": 8,  # How quickly uncertainty decreases with signal (k)
+            "adaptive_rate": 8,  # How quickly uncertainty decreases with signal (k)
             "measurement_noise_factor": 1e-4,
-            "signal_strength_max": 1,
-            "signal_decay_exp": 0.3,
+            "signal_max": 1,
+            "signal_decay": 0.3,
             "movement_step_size": 1.0,
             "kernel_size": 5,
             "target_reach_threshold": 2.0,
@@ -45,8 +45,8 @@ class BayesianNavigation:
         self.kernel_mat = np.sqrt((x - center) ** 2 + (y - center) ** 2)
 
     def get_expected_signal(self, distance):
-        return self.config["signal_strength_max"] / (
-            distance ** self.config["signal_decay_exp"]
+        return self.config["signal_max"] * np.exp(
+            -self.config["signal_decay"] * distance
         )
 
     def compute_all_expected_signal(self, target_pos):
@@ -54,7 +54,7 @@ class BayesianNavigation:
         y = np.arange(self.grid_size)
         xx, yy = np.meshgrid(x, y, indexing="ij")
         distance = np.sqrt((xx - target_pos[0]) ** 2 + (yy - target_pos[1]) ** 2)
-        distance = np.maximum(distance, 0.1)  # Avoid division by zero
+        distance = np.maximum(distance, 1e-8)  # Avoid division by zero
         signal = self.get_expected_signal(distance)
         return signal
 
@@ -75,7 +75,7 @@ class BayesianNavigation:
         distance = np.sqrt((xx - robot_pos[0]) ** 2 + (yy - robot_pos[1]) ** 2)
         distance = np.maximum(distance, 0.1)  # Avoid division by zero
         expected_measurement = self.get_expected_signal(distance)
-        
+
         likelihood = np.exp(
             -((measurement - expected_measurement) ** 2)
             / (2 * self.config["measurement_noise_factor"] ** 2)
@@ -90,7 +90,7 @@ class BayesianNavigation:
         """
         D_base = self.config["min_motion_sigma"]
         D_max = self.config["max_motion_sigma"]
-        k = self.config["motion_decay_rate"]
+        k = self.config["adaptive_rate"]
 
         return D_base + (D_max - D_base) * np.exp(-k * signal_strength)
 
@@ -166,8 +166,6 @@ def run_navigation_simulation(config=None, steps=100):
         if distance_to_target < env.config["target_reach_threshold"]:
             print(f"Target reached in {len(trajectory)} steps!")
             break
-        elif step % 5000 == 0:
-            print(f"Distance to target at step {step}: {distance_to_target:.2f}")
 
     return trajectory, env, sigmas
 
@@ -179,16 +177,16 @@ if __name__ == "__main__":
         "true_motion_sigma": 0.5,
         "min_motion_sigma": 0.5,
         "max_motion_sigma": 0.5,
-        "motion_decay_rate": 0.8,  # Irrelevant when min == max
+        "adaptive_rate": 0.8,  # Irrelevant when min == max
         "measurement_noise_factor": 0.06,
-        "signal_strength_max": 0.2,
-        "signal_decay_exp": 0.3,
+        "signal_max": 0.3,
+        "signal_decay": 0.2,
         "movement_step_size": 0.2,
         "kernel_size": 5,
         "target_reach_threshold": 5.0,
     }
     trajectory, env, sigmas = run_navigation_simulation(
-        config=example_config, steps=50000
+        config=example_config, steps=500000
     )
 
     trajectory = np.array(trajectory)
@@ -220,5 +218,4 @@ if __name__ == "__main__":
     ax2.set_title("Sigmas Over Time")
 
     plt.tight_layout()
-    plt.savefig("bayes_navigation.pdf", format="pdf", dpi=300)
     plt.show()

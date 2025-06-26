@@ -4,7 +4,6 @@ Main coordinator for Bayesian navigation simulation.
 """
 
 import numpy as np
-from utils import GridCache
 from signal_model import SignalModel
 from motion_model import MotionModel
 from bayesian_filter import BayesianFilter
@@ -19,23 +18,23 @@ class NavigationEnvironment:
             "grid_size": 100,
             "initial_belief": None,
             "true_target_pos": None,
-            "true_process_sigma": 0.5,
-            "min_motion_sigma": 0.1,
-            "motion_decay_rate": 8,
-            "signal_strength_max": 1,
-            "signal_decay_exp": 0.3,
+            "process_sigma": 0.5,
+            "min_motion_sigma": 0.01,
+            "adaptive_rate": 0.8,
+            "signal_max": 1,
+            "signal_decay": 0.3,
             "step_size": 0.1,
             "kernel_size": 5,
             "target_reach_threshold": 2.0,
             "innovation_window_size": 20,
             "adaptation_rate": 0.4,
-            "initial_measurement_sigma": 0.5,
-            "initial_process_sigma": 0.1,
+            "measurement_sigma_estimate": 0.5,
+            "process_sigma_estimate": 0.1,
             "min_allowed_variance": 1e-6,
             "adaptive_filtering": False,
             "adaptive_process_variance": "none",
-            "noise_model": "poisson",
-            "noise_std": 1,
+            "noise_model": "gaussian",
+            "noise_std": 0.06,
         }
 
         if config is not None:
@@ -49,12 +48,11 @@ class NavigationEnvironment:
         else:
             self.true_target_pos = self.config["true_target_pos"]
 
-        # Initialize subsystems
-        self.grid_cache = GridCache(self.config["grid_size"])
-        self.signal_model = SignalModel(self.config, self.grid_cache)
+        # Initialize subsystems (removed GridCache for simplicity)
+        self.signal_model = SignalModel(self.config)
         self.motion_model = MotionModel(self.config)
         self.bayesian_filter = BayesianFilter(
-            self.config, self.grid_cache, self.signal_model, self.motion_model
+            self.config, self.signal_model, self.motion_model
         )
 
         # Set adaptive process variance flag
@@ -108,7 +106,7 @@ def run_navigation_simulation(config=None, steps=100, verbose=False):
 
     robot_pos = (env.config["grid_size"] // 5, env.config["grid_size"] // 5)
     trajectory = [robot_pos]
-    sigmas = [env.config["initial_process_sigma"]]
+    sigmas = [env.config["process_sigma_estimate"]]
     innovations = []
     measurement_variances = []
 
@@ -117,6 +115,10 @@ def run_navigation_simulation(config=None, steps=100, verbose=False):
         innovation, measure_var = env.update_belief(measurement, robot_pos)
         sigma = env.motion_update(measurement, robot_pos)
         action = env.get_next_intended_action(robot_pos)
+        if np.any(np.isnan(action)):
+            print(f"Step {step}: NaN action detected: {action}")
+            print(f"Belief has NaN: {np.any(np.isnan(env.belief))}")
+            print(f"Belief sum: {np.sum(env.belief)}")
         robot_pos = env.update_position(robot_pos, action)
 
         # Update process variance based on actual motion error (for error_based adaptation)
@@ -145,27 +147,26 @@ if __name__ == "__main__":
     # Example usage with visualization
     from visualization import visualize_simulation_results
 
-    np.random.seed(2)
+    np.random.seed(1)
     example_config = {
         "grid_size": 100,
-        "motion_noise_type": "angular",
-        "angular_noise_sigma": 0.5,
-        "magnitude_noise_sigma": 0.0,
-        "initial_process_sigma": 0.5,
-        "motion_decay_rate": 0.8,
-        "signal_strength_max": 0.2,
-        "signal_decay_exp": 0.3,
+        "motion_noise_type": "isotropic",
+        "process_sigma": 0.5,
+        "process_sigma_estimate": 0.5,
+        "adaptive_rate": 0.8,
+        "signal_max": 10,
+        "signal_decay": 0.02,
         "step_size": 0.2,
         "kernel_size": 5,
         "adaptive_filtering": False,
         "adaptive_process_variance": "none",
         "noise_model": "gaussian",
-        "noise_std": 0.06,
-        "initial_measurement_sigma": 0.06,
+        "noise_std": 40,
+        "measurement_sigma_estimate": 40,
     }
 
     trajectory, env, sigmas, innovations, measurement_variances = (
-        run_navigation_simulation(config=example_config, steps=50000, verbose=True)
+        run_navigation_simulation(config=example_config, steps=10000, verbose=True)
     )
 
     # Create comprehensive visualization

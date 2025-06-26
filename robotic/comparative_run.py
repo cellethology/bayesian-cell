@@ -8,8 +8,8 @@ from navigation_env import run_navigation_simulation
 def run_comparative_simulation(seed, base_config, max_steps, verbose=False):
     np.random.seed(seed)
     all_configs_to_try = [
-        {"initial_process_sigma": 0.001, "adaptive_process_variance": "none"},
-        {"initial_process_sigma": 2, "adaptive_process_variance": "none"},
+        {"process_sigma_estimate": 0.001, "adaptive_process_variance": "none"},
+        {"process_sigma_estimate": 2, "adaptive_process_variance": "none"},
     ]
     results = {}
     for i, config in enumerate(all_configs_to_try):
@@ -41,18 +41,18 @@ def run_parallel_comparative_runs(
 
 if __name__ == "__main__":
     base_config = {
-        "true_process_sigma": 2,
-        "initial_process_sigma": 0.001,  # true_process_sigma * step_size
-        "motion_decay_rate": 0.8,  # Irrelevant when min == max
-        "signal_strength_max": 2,
-        "signal_decay_exp": 0.5,
+        "process_sigma": 2,
+        "process_sigma_estimate": 0.001,  # process_sigma * step_size
+        "adaptive_rate": 0.8,  # Irrelevant when min == max
+        "signal_max": 2,
+        "signal_decay": 0.5,
         "step_size": 1,
         "kernel_size": 5,
         "adaptive_filtering": False,
         "adaptive_process_variance": "none",
         "noise_model": "gaussian",
         "noise_std": 0.5,
-        "initial_measurement_sigma": 0.5,
+        "measurement_sigma_estimate": 0.5,
     }
     # Prepare labels
     config_labels = [

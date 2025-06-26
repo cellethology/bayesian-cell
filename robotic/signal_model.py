@@ -4,20 +4,16 @@ Handles signal strength computation, measurements, and signal gradients.
 """
 
 import numpy as np
-import numba
 from scipy.stats import poisson
 
 
-@numba.jit(nopython=True, cache=True)
-def compute_signal_fast(distance_grid, signal_max, decay_exp):
-    """JIT-compiled fast signal computation."""
-    # return signal_max * np.exp(-decay_exp * distance_grid)
-    return signal_max / (distance_grid**decay_exp)
+def compute_signal_simple(distance_grid, signal_max, decay_exp):
+    """Simple signal computation without JIT."""
+    return signal_max * np.exp(-decay_exp * distance_grid)
 
 
-@numba.jit(nopython=True, cache=True)
-def compute_likelihood_gaussian(measurement, expected_signal, variance):
-    """JIT-compiled Gaussian likelihood computation."""
+def compute_likelihood_gaussian_simple(measurement, expected_signal, variance):
+    """Simple Gaussian likelihood computation without JIT."""
     diff_sq = (measurement - expected_signal) ** 2
     return np.exp(-diff_sq / (2 * variance))
 
@@ -25,28 +21,29 @@ def compute_likelihood_gaussian(measurement, expected_signal, variance):
 class SignalModel:
     """Manages signal strength computations and noisy measurements."""
 
-    def __init__(self, config, grid_cache):
+    def __init__(self, config, grid_cache=None):
         self.config = config
-        self.grid_cache = grid_cache
+        self.grid_size = config["grid_size"]
 
     def get_expected_signal(self, x, y, target_pos):
         """Compute expected signal strength at position (x, y) from target."""
         distance = np.sqrt((x - target_pos[0]) ** 2 + (y - target_pos[1]) ** 2)
-        distance = np.maximum(distance, 1e-1)  # Avoid division by zero
-        # return self.config["signal_strength_max"] * np.exp(
-        #     -self.config["signal_decay_exp"] * distance
-        # )
-        return self.config["signal_strength_max"] / (
-            distance ** self.config["signal_decay_exp"]
+        distance = np.maximum(distance, 1e-8)  # Avoid division by zero
+        return self.config["signal_max"] * np.exp(
+            -self.config["signal_decay"] * distance
         )
 
     def compute_all_expected_signal(self, target_pos):
-        """Optimized version using cached grids and JIT-compiled signal computation."""
-        distance_grid = self.grid_cache.get_distance_grid(target_pos)
-        signal = compute_signal_fast(
-            distance_grid,
-            self.config["signal_strength_max"],
-            self.config["signal_decay_exp"],
+        """Direct computation exactly like old implementation."""
+        x = np.arange(self.grid_size)
+        y = np.arange(self.grid_size)
+        xx, yy = np.meshgrid(x, y, indexing="ij")
+        distance = np.sqrt((xx - target_pos[0]) ** 2 + (yy - target_pos[1]) ** 2)
+        distance = np.maximum(distance, 0.1)  # Avoid division by zero
+        signal = compute_signal_simple(
+            distance,
+            self.config["signal_max"],
+            self.config["signal_decay"],
         )
         return signal
 
@@ -55,9 +52,14 @@ class SignalModel:
         expected_signal = self.get_expected_signal(pos[0], pos[1], target_pos)
 
         if self.config["noise_model"] == "poisson":
+            # Ensure expected_signal is positive and finite for Poisson distribution
+            expected_signal = np.maximum(expected_signal, 1e-8)
+            if not np.isfinite(expected_signal):
+                expected_signal = 1e-8
             signal = np.random.poisson(expected_signal)
         elif self.config["noise_model"] == "gaussian":
-            signal = np.random.normal(expected_signal, self.config["noise_std"])
+            noise = np.random.normal(0, self.config["noise_std"])
+            signal = expected_signal + noise
         else:
             raise ValueError(f"Invalid noise model: {self.config['noise_model']}")
         return signal
@@ -77,8 +79,8 @@ class SignalModel:
         dy = y_r - y_t
         distance = np.sqrt(dx**2 + dy**2)
 
-        A = self.config["signal_strength_max"]
-        k = self.config["signal_decay_exp"]
+        A = self.config["signal_max"]
+        k = self.config["signal_decay"]
 
         # Ensure distance is never zero
         if distance < 1e-8:
@@ -94,7 +96,7 @@ class SignalModel:
     def get_likelihood(self, measurement, expected_signal_grid, measurement_variance):
         """Compute likelihood of measurement given expected signal grid."""
 
-        likelihood = compute_likelihood_gaussian(
+        likelihood = compute_likelihood_gaussian_simple(
             measurement, expected_signal_grid, measurement_variance
         )
         likelihood = np.clip(likelihood, 1e-12, None)

@@ -10,6 +10,7 @@ from tqdm import tqdm
 from navigation_env import run_navigation_simulation
 import pandas as pd
 from typing import Dict, Any, Optional
+import os
 
 
 def run_single_config_simulation(args):
@@ -17,17 +18,8 @@ def run_single_config_simulation(args):
     seed, config_name, config, max_steps, verbose = args
 
     np.random.seed(seed)
-    trajectory, env, sigmas, innovations, measurement_variances = (
-        run_navigation_simulation(config=config, steps=max_steps, verbose=verbose)
-    )
-
-    # Compute basic performance metrics
-    final_sigma = sigmas[-1] if len(sigmas) > 0 else np.nan
-    true_sigma = config.get("true_process_sigma", np.nan)
-    sigma_error = (
-        abs(final_sigma - true_sigma)
-        if not np.isnan(true_sigma) and not np.isnan(final_sigma)
-        else np.nan
+    trajectory, env, _, _, _ = run_navigation_simulation(
+        config=config, steps=max_steps, verbose=verbose
     )
 
     # Final distance to target
@@ -35,54 +27,16 @@ def run_single_config_simulation(args):
     final_distance = np.linalg.norm(trajectory[-1] - np.array(true_target))
     target_reached = final_distance < env.config.get("target_reach_threshold", 5.0)
 
-    # Innovation statistics
-    innovation_mean = np.mean(innovations) if len(innovations) > 0 else 0
-    innovation_std = np.std(innovations) if len(innovations) > 0 else 0
-    innovation_autocorr = (
-        np.corrcoef(innovations[:-1], innovations[1:])[0, 1]
-        if len(innovations) > 1
-        else 0
-    )
-
-    # Simple convergence check (sigma stabilization in last 20%)
-    if len(sigmas) > 10:
-        tail_length = max(5, len(sigmas) // 5)
-        tail_sigmas = sigmas[-tail_length:]
-        sigma_converged = np.std(tail_sigmas) < 0.1 * np.mean(tail_sigmas)
-    else:
-        sigma_converged = False
-
-    # Basic normality test for innovations
-    try:
-        from scipy.stats import normaltest
-
-        if len(innovations) > 10:
-            _, p_value = normaltest(innovations)
-            innovations_normal = p_value > 0.05
-        else:
-            innovations_normal = False
-    except:
-        innovations_normal = False
+    # Calculate mean signal of entire environment
+    signal_grid = env.signal_model.compute_all_expected_signal(true_target)
+    mean_signal = np.mean(signal_grid)
 
     results = {
         "config_name": config_name,
         "seed": seed,
-        "trajectory": trajectory,
-        "sigmas": sigmas,
-        "innovations": innovations,
-        "measurement_variances": measurement_variances,
-        "env_config": env.config,
-        # Performance metrics
         "steps_to_target": len(trajectory),
-        "final_sigma": final_sigma,
-        "sigma_error": sigma_error,
         "target_reached": target_reached,
-        "sigma_converged": sigma_converged,
-        "innovations_normal": innovations_normal,
-        "final_distance": final_distance,
-        "innovation_mean": innovation_mean,
-        "innovation_std": innovation_std,
-        "innovation_autocorr": innovation_autocorr,
+        "mean_signal": mean_signal,
     }
 
     return results
@@ -109,6 +63,7 @@ class MultiConfigComparison:
         """
         self.base_config = base_config or {}
         self.configs = {}
+        self.config_order = []  # Track order of added configs
 
     def add_config(self, name: str, config: Dict[str, Any]):
         """
@@ -121,6 +76,8 @@ class MultiConfigComparison:
         full_config = self.base_config.copy()
         full_config.update(config)
         self.configs[name] = full_config
+        if name not in self.config_order:
+            self.config_order.append(name)
 
     def run_comparison(
         self,
@@ -158,7 +115,7 @@ class MultiConfigComparison:
 
         # Run simulations in parallel
         if n_processes is None:
-            n_processes = min(len(tasks), 8)  # Reasonable default
+            n_processes = min(len(tasks), os.cpu_count())  # Reasonable default
 
         results = []
         with Pool(n_processes) as pool:
@@ -188,13 +145,22 @@ class MultiConfigComparison:
 
             print(f"\n{config_name}:")
             print(f"  Success Rate: {config_data['target_reached'].mean():.2%}")
+            q25 = config_data["steps_to_target"].quantile(0.25)
+            q50 = config_data["steps_to_target"].median()
+            q75 = config_data["steps_to_target"].quantile(0.75)
+            print(f"  Median Steps: {q50:.0f} (Q1: {q25:.0f}, Q3: {q75:.0f})")
+            # print mean steps and std to target for successful runs
+            successful_data = config_data[config_data["target_reached"] == True]
             print(
-                f"  Avg Steps: {config_data['steps_to_target'].mean():.0f} ± {config_data['steps_to_target'].std():.0f}"
+                f"  Mean Steps to Target (Successful Runs): {successful_data['steps_to_target'].mean():.0f} ± {successful_data['steps_to_target'].std():.0f}"
             )
+            mean_signal_avg = config_data["mean_signal"].mean()
+            mean_signal_std = config_data["mean_signal"].std()
+            print(f"  Mean Signal: {mean_signal_avg:.4f} ± {mean_signal_std:.4f}")
 
-    def create_comparison_plots(self, df: pd.DataFrame, figsize: tuple = (10, 5)):
+    def create_comparison_plots(self, df: pd.DataFrame, figsize: tuple = (12, 5)):
         """
-        Create simple comparison plots focusing on success rate and completion time.
+        Create comparison plots for success rate and completion time.
 
         Args:
             df: Results DataFrame from run_comparison()
@@ -202,7 +168,10 @@ class MultiConfigComparison:
         """
         fig, (ax1, ax2) = plt.subplots(1, 2, figsize=figsize)
 
-        config_names = df["config_name"].unique()
+        # Use preserved config order instead of df unique order
+        config_names = [
+            name for name in self.config_order if name in df["config_name"].values
+        ]
         colors = plt.cm.Set2(np.linspace(0, 1, len(config_names)))
 
         # 1. Success rate comparison
@@ -214,7 +183,6 @@ class MultiConfigComparison:
         ax1.set_ylabel("Success Rate")
         ax1.set_title("Target Achievement Rate")
         ax1.set_ylim(0, 1.1)
-        # Add value labels on bars
         for bar, rate in zip(bars, success_rates):
             ax1.text(
                 bar.get_x() + bar.get_width() / 2,
@@ -226,30 +194,22 @@ class MultiConfigComparison:
         ax1.grid(True, alpha=0.3, axis="y")
 
         # 2. Completion time for successful runs only
-        successful_completion_data = []
-        successful_config_names = []
+        successful_data = []
+        labels = []
 
         for name in config_names:
             config_data = df[df["config_name"] == name]
             successful_runs = config_data[config_data["target_reached"] == True]
             if len(successful_runs) > 0:
-                successful_completion_data.append(
-                    successful_runs["steps_to_target"].values
-                )
-                successful_config_names.append(name)
+                successful_data.append(successful_runs["steps_to_target"].values)
+                labels.append(name)
 
-        if successful_completion_data:
-            bp = ax2.boxplot(
-                successful_completion_data,
-                tick_labels=successful_config_names,
-                patch_artist=True,
-            )
-            for patch, color in zip(
-                bp["boxes"], colors[: len(successful_config_names)]
-            ):
+        if successful_data:
+            bp = ax2.boxplot(successful_data, tick_labels=labels, patch_artist=True)
+            for patch, color in zip(bp["boxes"], colors[: len(labels)]):
                 patch.set_facecolor(color)
             ax2.set_ylabel("Steps to Target")
-            ax2.set_title("Completion Time (Successful Runs Only)")
+            ax2.set_title("Completion Time (Successful Runs)")
             ax2.grid(True, alpha=0.3)
         else:
             ax2.text(
@@ -310,19 +270,19 @@ if __name__ == "__main__":
     # Define base configuration (shared parameters)
     base_config = {
         "grid_size": 100,
-        "motion_noise_type": "angular",
-        "angular_noise_sigma": 0.6,
-        "magnitude_noise_sigma": 0.01,
-        "initial_process_sigma": 1,
-        "motion_decay_rate": 0.8,
-        "signal_strength_max": 10,
-        "signal_decay_exp": 0.2,
-        "step_size": 0.1,
+        "motion_noise_type": "isotropic",
+        "process_sigma": 0.2,
+        # "angular_noise_sigma": 0.3,
+        # "magnitude_noise_sigma": 0.3,
+        "process_sigma_estimate": 0.2,
+        "signal_max": 10,
+        "signal_decay": 0.02,
+        "step_size": 0.2,
         "kernel_size": 5,
         "adaptive_filtering": False,
-        "noise_model": "gaussian",
-        "noise_std": 0.1,
-        "initial_measurement_sigma": 0.1,
+        "noise_model": "poisson",
+        "noise_std": 0.06,
+        "measurement_sigma_estimate": 0.01,
     }
 
     # Define configurations to compare
@@ -332,7 +292,7 @@ if __name__ == "__main__":
         },
         "Exponential": {
             "adaptive_process_variance": "exponential",
-            "motion_decay_rate": 1.0,
+            "adaptive_rate": 0.8,
         },
     }
 
@@ -340,7 +300,7 @@ if __name__ == "__main__":
     results, plots = quick_compare(
         configs_to_compare,
         base_config=base_config,
-        n_runs=20,  # Small number for demo
+        n_runs=100,  # Small number for demo
         max_steps=500000,
     )
 

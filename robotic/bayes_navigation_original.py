@@ -14,18 +14,18 @@ class BayesianNavigation:
             "grid_size": 100,
             "initial_belief": None,
             "true_target_pos": None,
-            "true_process_sigma": 0.5,  # Actual noise in robot motion
+            "process_sigma": 0.5,  # Actual noise in robot motion
             "min_motion_sigma": 0.001,  # Minimum uncertainty in motion model (D_base)
-            "motion_decay_rate": 8,  # How quickly uncertainty decreases with signal (k)
-            "signal_strength_max": 1,
-            "signal_decay_exp": 0.3,
+            "adaptive_rate": 8,  # How quickly uncertainty decreases with signal (k)
+            "signal_max": 1,
+            "signal_decay": 0.3,
             "step_size": 0.1,
             "kernel_size": 5,
             "target_reach_threshold": 5.0,
             "innovation_window_size": 20,  # Size of window for innovation statistics
             "adaptation_rate": 0.4,  # Rate of adaptation for measurement and process noise
-            "initial_measurement_sigma": 0.5,  # Initial estimate of measurement noise
-            "initial_process_sigma": 0.1,  # Initial estimate of process noise
+            "measurement_sigma_estimate": 0.5,  # Initial estimate of measurement noise
+            "process_sigma_estimate": 0.1,  # Initial estimate of process noise
             "min_allowed_variance": 1e-6,  # Minimum allowed variance to prevent numerical issues
             "adaptive_filtering": False,  # Enable adaptive filtering
             "adaptive_process_variance": "error_based",  # "error_based" or "exponential"
@@ -72,8 +72,8 @@ class BayesianNavigation:
 
         # Adaptive Kalman Filter parameters
         self.adaptive_filtering = self.config["adaptive_filtering"]
-        self.measurement_variance = self.config["initial_measurement_sigma"] ** 2
-        self.process_variance = self.config["initial_process_sigma"] ** 2
+        self.measurement_variance = self.config["measurement_sigma_estimate"] ** 2
+        self.process_variance = self.config["process_sigma_estimate"] ** 2
 
         # Use deque for better performance instead of lists
         window_size = self.config["innovation_window_size"]
@@ -196,8 +196,8 @@ class BayesianNavigation:
     def get_expected_signal(self, xx, yy, target_pos):
         distance = np.sqrt((xx - target_pos[0]) ** 2 + (yy - target_pos[1]) ** 2)
         distance = np.maximum(distance, 1e-8)  # Avoid division by zero
-        return self.config["signal_strength_max"] * np.exp(
-            -self.config["signal_decay_exp"] * distance
+        return self.config["signal_max"] * np.exp(
+            -self.config["signal_decay"] * distance
         )
 
     def compute_all_expected_signal(self, target_pos):
@@ -206,8 +206,8 @@ class BayesianNavigation:
         distance_grid = self._get_distance_grid(target_pos)
         signal = self._compute_signal_fast(
             distance_grid,
-            self.config["signal_strength_max"],
-            self.config["signal_decay_exp"],
+            self.config["signal_max"],
+            self.config["signal_decay"],
         )
         return signal
 
@@ -260,8 +260,8 @@ class BayesianNavigation:
         dy = y_r - y_t
         distance = np.sqrt(dx**2 + dy**2)
 
-        A = self.config["signal_strength_max"]
-        k = self.config["signal_decay_exp"]
+        A = self.config["signal_max"]
+        k = self.config["signal_decay"]
 
         # Ensure distance is never zero
         if distance < 1e-8:
@@ -373,8 +373,8 @@ class BayesianNavigation:
         D(s) = D_base + (D_max - D_base) * exp(-k * s)
         """
         D_base = self.config["min_motion_sigma"]
-        D_max = self.config["initial_process_sigma"]
-        k = self.config["motion_decay_rate"]
+        D_max = self.config["process_sigma_estimate"]
+        k = self.config["adaptive_rate"]
 
         return D_base + (D_max - D_base) * np.exp(-k * signal_strength)
 
@@ -396,7 +396,7 @@ class BayesianNavigation:
 
             adaptive_sigma = np.sqrt(self.process_variance)
         else:  # Default case for "none" or other invalid values
-            adaptive_sigma = self.config["initial_process_sigma"]
+            adaptive_sigma = self.config["process_sigma_estimate"]
 
         kernel = np.exp(-(self.kernel_mat**2) / (2 * adaptive_sigma**2))
         kernel /= kernel.sum()
@@ -425,10 +425,10 @@ class BayesianNavigation:
     def update_position(self, true_pos, action):
         """
         Update the true state (position) of the robot based on the intended action.
-        Uses an isotropic Gaussian motion model with standard deviation true_process_sigma.
+        Uses an isotropic Gaussian motion model with standard deviation process_sigma.
         """
         s = self.config["step_size"]
-        sigma = self.config["true_process_sigma"]
+        sigma = self.config["process_sigma"]
 
         # Normalize action direction
         norm = np.linalg.norm(action)
@@ -475,7 +475,7 @@ def run_navigation_simulation(config=None, steps=100, verbose=False):
 
     robot_pos = (env.grid_size // 5, env.grid_size // 5)
     trajectory = [robot_pos]
-    sigmas = [env.config["initial_process_sigma"]]
+    sigmas = [env.config["process_sigma_estimate"]]
     innovations = []
     measurement_variances = []
 
@@ -512,18 +512,18 @@ if __name__ == "__main__":
     np.random.seed(5)
     example_config = {
         "grid_size": 100,
-        "true_process_sigma": 0.5,
-        "initial_process_sigma": 0.5,  # true_process_sigma * step_size
-        "motion_decay_rate": 0.8,  # Irrelevant when min == max
-        "signal_strength_max": 2,
-        "signal_decay_exp": 0.3,
+        "process_sigma": 0.5,
+        "process_sigma_estimate": 0.5,  # process_sigma * step_size
+        "adaptive_rate": 0.8,  # Irrelevant when min == max
+        "signal_max": 2,
+        "signal_decay": 0.3,
         "step_size": 1,
         "kernel_size": 5,
         "adaptive_filtering": False,
         "adaptive_process_variance": "none",
         "noise_model": "gaussian",
         "noise_std": 0.1,
-        "initial_measurement_sigma": 0.1,
+        "measurement_sigma_estimate": 0.1,
     }
     trajectory, env, sigmas, innovations, measurement_variances = (
         run_navigation_simulation(config=example_config, steps=100000, verbose=True)

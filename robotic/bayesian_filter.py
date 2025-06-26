@@ -6,28 +6,28 @@ Handles belief updates, adaptive filtering, and innovation tracking.
 import numpy as np
 from scipy.signal import convolve2d, fftconvolve
 from collections import deque
-from utils import compute_variance_stats
 
 
 class BayesianFilter:
     """Manages belief state updates and adaptive Kalman filtering."""
 
-    def __init__(self, config, grid_cache, signal_model, motion_model):
+    def __init__(self, config, signal_model, motion_model):
         self.config = config
-        self.grid_cache = grid_cache
         self.signal_model = signal_model
         self.motion_model = motion_model
+        self.grid_size = config["grid_size"]
 
         # Initialize belief state
-        grid_size = config["grid_size"]
         if config.get("initial_belief") is None:
-            self.belief = np.ones((grid_size, grid_size)) / (grid_size * grid_size)
+            self.belief = np.ones((self.grid_size, self.grid_size)) / (
+                self.grid_size * self.grid_size
+            )
         else:
             self.belief = config["initial_belief"]
 
         # Adaptive Kalman Filter parameters
         self.adaptive_filtering = config["adaptive_filtering"]
-        self.measurement_variance = config["initial_measurement_sigma"] ** 2
+        self.measurement_variance = config["measurement_sigma_estimate"] ** 2
 
         # Use deque for better performance instead of lists
         window_size = config["innovation_window_size"]
@@ -96,7 +96,7 @@ class BayesianFilter:
             self.motion_model.store_intended_position(current_pos, action)
             adaptive_sigma = np.sqrt(self.motion_model.process_variance)
         else:  # Default case for "none" or other invalid values
-            adaptive_sigma = self.config["initial_process_sigma"]
+            adaptive_sigma = self.config["process_sigma_estimate"]
 
         kernel = self.motion_model.get_simple_motion_kernel(adaptive_sigma)
 
@@ -109,8 +109,16 @@ class BayesianFilter:
         return adaptive_sigma
 
     def _diag_state_cov(self):
-        """Var(x), Var(y) of the posterior belief – JIT-optimized version."""
-        return compute_variance_stats(self.grid_cache.grid_indices, self.belief)
+        """Var(x), Var(y) of the posterior belief – simple version."""
+        x = np.arange(self.grid_size)
+        y = np.arange(self.grid_size)
+        xx, yy = np.meshgrid(x, y, indexing="ij")
+
+        μx = np.sum(xx * self.belief)
+        μy = np.sum(yy * self.belief)
+        var_x = np.sum(((xx - μx) ** 2) * self.belief)
+        var_y = np.sum(((yy - μy) ** 2) * self.belief)
+        return var_x, var_y
 
     def adapt_noise_parameters(self):
         """
