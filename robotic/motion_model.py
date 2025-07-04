@@ -8,7 +8,11 @@ from numpy.random import normal
 
 
 class MotionModel:
-    """Manages robot motion, kernels, and adaptive process variance."""
+    """Manages robot motion and target motion uncertainty estimation.
+
+    Note: Motion kernels represent uncertainty in TARGET dynamics, not robot motion.
+    Robot motion has separate noise modeling for realistic actuator behavior.
+    """
 
     def __init__(self, config):
         self.config = config
@@ -21,7 +25,6 @@ class MotionModel:
         self.kernel_mat = np.sqrt((x - center) ** 2 + (y - center) ** 2)
 
         # Removed kernel caching for simplicity
-
 
         # Adaptive process variance tracking
         self.previous_intended_pos = None
@@ -67,8 +70,11 @@ class MotionModel:
 
     def get_simple_motion_kernel(self, adaptive_sigma):
         """
-        Simple isotropic Gaussian motion kernel (similar to old implementation).
-        Returns a 2D Gaussian kernel with uniform uncertainty in all directions.
+        Simple isotropic Gaussian motion kernel for target motion uncertainty.
+
+        This kernel represents uncertainty in target movement, not robot motion.
+        Adaptive_sigma scales with signal strength: strong signals suggest
+        stationary target (low uncertainty), weak signals suggest moving target.
         """
         kernel = np.exp(-(self.kernel_mat**2) / (2 * adaptive_sigma**2))
         kernel /= kernel.sum()
@@ -76,14 +82,22 @@ class MotionModel:
 
     def get_adaptive_motion_sigma(self, signal_strength):
         """
-        Calculate motion model uncertainty based on signal strength.
-        D(s) = D_base + (D_max - D_base) * exp(-k * s)
-        """
-        D_base = self.config["min_motion_sigma"]
-        D_max = self.config["process_sigma_estimate"]
-        k = self.config["adaptive_rate"]
+        Adapt target motion uncertainty based on signal strength.
 
-        return D_base + (D_max - D_base) * np.exp(-k * signal_strength)
+        Supports multiple decay types:
+        - power_law: D_max / (k * s + 1)^p where p is power_exponent
+        """
+        D_max = self.config["process_sigma_estimate"]
+        decay_type = self.config.get("adaptive_decay_type", "exponential")
+
+        if decay_type == "power_law":
+            # Use separate power_exponent parameter
+            power_exp = self.config.get("power_exponent", 1.0)
+            return D_max / (signal_strength + 1) ** power_exp
+        else:
+            raise ValueError(
+                f"Unknown adaptive_decay_type: {decay_type}. Must be 'exponential' or 'power_law'"
+            )
 
     def get_next_intended_action(self, robot_pos, belief):
         """Get unnormalized step vector towards estimated target."""
@@ -99,11 +113,11 @@ class MotionModel:
 
     def update_position(self, true_pos, action):
         """
-        Update the true robot position based on intended action.
-        Uses configurable noise model (isotropic or angular-focused).
+        Update the true robot position with realistic actuator noise.
+
+        This models actual robot motion uncertainty (separate from target tracking).
         """
         s = self.config["step_size"]
-        noise_type = self.config.get("motion_noise_type", "isotropic")
 
         # Normalize action direction
         norm = np.linalg.norm(action)
@@ -116,26 +130,10 @@ class MotionModel:
         dx = s * direction[0]
         dy = s * direction[1]
 
-        if noise_type == "angular":
-            # Angular-focused noise: main variation in angle, smaller in magnitude
-            theta = np.arctan2(dy, dx)
-            magnitude = np.sqrt(dx**2 + dy**2)
-
-            # Add angular noise (larger) and magnitude noise (smaller)
-            angular_sigma = self.config.get("angular_noise_sigma")
-            magnitude_sigma = self.config.get("magnitude_noise_sigma")
-
-            noisy_theta = theta + normal(0, angular_sigma)
-            noisy_magnitude = magnitude + normal(0, magnitude_sigma)
-
-            # Convert back to Cartesian coordinates
-            noisy_dx = noisy_magnitude * np.cos(noisy_theta)
-            noisy_dy = noisy_magnitude * np.sin(noisy_theta)
-        elif noise_type == "isotropic":
-            # Default isotropic Gaussian noise
-            sigma = self.config["process_sigma"]
-            noisy_dx = dx + normal(0, sigma)
-            noisy_dy = dy + normal(0, sigma)
+        # Default isotropic Gaussian noise
+        sigma = self.config["process_sigma"]
+        noisy_dx = dx + normal(0, sigma)
+        noisy_dy = dy + normal(0, sigma)
 
         # Compute new position
         new_x = np.clip(true_pos[0] + noisy_dx, 0, self.grid_size - 1)

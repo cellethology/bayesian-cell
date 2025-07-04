@@ -8,14 +8,18 @@ from scipy.stats import poisson
 
 
 def compute_signal_simple(distance_grid, signal_max, decay_exp):
-    """Simple signal computation without JIT."""
     return signal_max * np.exp(-decay_exp * distance_grid)
 
 
 def compute_likelihood_gaussian_simple(measurement, expected_signal, variance):
-    """Simple Gaussian likelihood computation without JIT."""
     diff_sq = (measurement - expected_signal) ** 2
     return np.exp(-diff_sq / (2 * variance))
+
+
+def compute_likelihood_poisson_simple(measurement, expected_signal):
+    """Compute Poisson likelihood using scipy for numerical stability."""
+    expected_signal = np.maximum(expected_signal, 1e-8)
+    return poisson.pmf(measurement, expected_signal)
 
 
 class SignalModel:
@@ -96,9 +100,16 @@ class SignalModel:
     def get_likelihood(self, measurement, expected_signal_grid, measurement_variance):
         """Compute likelihood of measurement given expected signal grid."""
 
-        likelihood = compute_likelihood_gaussian_simple(
-            measurement, expected_signal_grid, measurement_variance
-        )
-        likelihood = np.clip(likelihood, 1e-12, None)
+        if self.config["noise_model"] == "poisson":
+            likelihood = compute_likelihood_gaussian_simple(
+                measurement, expected_signal_grid, measurement_variance
+            )
+        elif self.config["noise_model"] == "gaussian":
+            likelihood = compute_likelihood_gaussian_simple(
+                measurement, expected_signal_grid, measurement_variance
+            )
+        else:
+            raise ValueError(f"Invalid noise model: {self.config['noise_model']}")
 
+        likelihood = np.clip(likelihood, 1e-12, None)
         return likelihood

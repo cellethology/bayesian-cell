@@ -91,6 +91,9 @@ class BayesianFilter:
         else:  # False means no adaptation
             adaptive_sigma = self.config["process_sigma_estimate"]
 
+        # apply a minimum motion sigma
+        adaptive_sigma = max(adaptive_sigma, self.config["min_motion_sigma"])
+
         kernel = self.motion_model.get_simple_motion_kernel(adaptive_sigma)
 
         # Use same convolution method as old implementation

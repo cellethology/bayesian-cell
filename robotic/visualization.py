@@ -10,9 +10,10 @@ import matplotlib.pyplot as plt
 class NavigationVisualizer:
     """Handles visualization and plotting for navigation results."""
 
-    def __init__(self, env, trajectory, sigmas, innovations, measurement_variances):
+    def __init__(self, env, trajectory, target_trajectory, sigmas, innovations, measurement_variances):
         self.env = env
         self.trajectory = np.array(trajectory)
+        self.target_trajectory = np.array(target_trajectory)
         self.sigmas = np.array(sigmas)
         self.innovations = np.array(innovations)
         self.measurement_variances = np.array(measurement_variances)
@@ -38,7 +39,8 @@ class NavigationVisualizer:
         return fig
 
     def _plot_signal_map_and_trajectory(self, ax):
-        """Plot signal strength map with robot trajectory."""
+        """Plot signal strength map with robot and target trajectories."""
+        # Use final target position for signal map background
         signal_map = self.env.signal_model.compute_all_expected_signal(
             self.env.true_target_pos
         )
@@ -53,16 +55,16 @@ class NavigationVisualizer:
         else:
             print(f"Noise level: {self.env.config['noise_std']:.3f}")
 
-        ax.plot(self.trajectory[:, 1], self.trajectory[:, 0], "b-", label="Robot Path")
-        ax.plot(
-            self.env.true_target_pos[1],
-            self.env.true_target_pos[0],
-            "g*",
-            markersize=15,
-            label="Target",
-        )
-        ax.plot(self.trajectory[0, 1], self.trajectory[0, 0], "bs", label="Start")
-        ax.set_title("Signal Map & Trajectory")
+        # Plot robot trajectory
+        ax.plot(self.trajectory[:, 1], self.trajectory[:, 0], "b-", linewidth=2, label="Robot Path")
+        ax.plot(self.trajectory[0, 1], self.trajectory[0, 0], "bs", markersize=8, label="Robot Start")
+        
+        # Plot target trajectory
+        ax.plot(self.target_trajectory[:, 1], self.target_trajectory[:, 0], "r-", linewidth=2, alpha=0.7, label="Target Path")
+        ax.plot(self.target_trajectory[0, 1], self.target_trajectory[0, 0], "ro", markersize=8, label="Target Start")
+        ax.plot(self.target_trajectory[-1, 1], self.target_trajectory[-1, 0], "r*", markersize=15, label="Target End")
+        
+        ax.set_title("Signal Map & Trajectories")
         ax.legend()
 
     def _plot_belief_state(self, ax):
@@ -194,6 +196,7 @@ class NavigationVisualizer:
 def visualize_simulation_results(
     env,
     trajectory,
+    target_trajectory,
     sigmas,
     innovations,
     measurement_variances,
@@ -207,6 +210,7 @@ def visualize_simulation_results(
     Args:
         env: NavigationEnvironment instance
         trajectory: Robot trajectory
+        target_trajectory: Target trajectory
         sigmas: Motion sigma evolution
         innovations: Innovation sequence
         measurement_variances: Measurement variance evolution
@@ -218,7 +222,7 @@ def visualize_simulation_results(
         matplotlib Figure object
     """
     visualizer = NavigationVisualizer(
-        env, trajectory, sigmas, innovations, measurement_variances
+        env, trajectory, target_trajectory, sigmas, innovations, measurement_variances
     )
 
     if plot_type == "comprehensive":
