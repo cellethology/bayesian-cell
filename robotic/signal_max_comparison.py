@@ -50,11 +50,11 @@ def run_signal_max_comparison():
 
     # Fixed parameters
     signal_decay = 0.05
-    n_runs = 200  # Reasonable number for bootstrap CI
-    max_steps = 1000000
+    n_runs = 20  # Reasonable number for bootstrap CI
+    max_steps = 500000
 
     # Variable parameter: signal_max values
-    signal_max_values = np.linspace(5, 5, 2)
+    signal_max_values = np.linspace(5, 5, 1)
 
     print(f"Fixed signal_decay: {signal_decay}")
     print(f"Signal max values: {signal_max_values}")
@@ -73,9 +73,9 @@ def run_signal_max_comparison():
         "actuator_noise": 0.5,
         "target_true_pos": [20.0, 20.0],
         "initial_belief_mean": [0.0, 0.0],
-        "initial_belief_variance": 10000000.0,
-        "target_motion_sigma": 0.5,
-        "baseline_process_noise": 0.5,
+        "initial_belief_variance": 1000.0,
+        "target_motion_sigma": 0.01,
+        "baseline_process_noise": 0.01,
         "alpha_R": 0.5,
         "adaptive_measurement_noise": False,
         "max_steps": max_steps,
@@ -83,21 +83,21 @@ def run_signal_max_comparison():
 
     # Three configurations to compare
     method_configs = {
-        # "Standard EKF": {
-        #     "adaptive_process_noise": False,
+        "Standard EKF": {
+            "adaptive_process_noise": False,
+            "adaptive_measurement_noise": False,
+            "periodic_boundaries": False,
+        },
+        # "Signal-aware EKF": {
+        #     "adaptive_process_noise": True,
         #     "adaptive_measurement_noise": False,
         #     "periodic_boundaries": True,
         # },
-        "Signal-aware EKF": {
-            "adaptive_process_noise": True,
-            "adaptive_measurement_noise": False,
-            "periodic_boundaries": True,
-        },
-        "Adaptive EKF": {
-            "adaptive_process_noise": False,
-            "adaptive_measurement_noise": True,
-            "periodic_boundaries": True,
-        },
+        # "Adaptive EKF": {
+        #     "adaptive_process_noise": False,
+        #     "adaptive_measurement_noise": True,
+        #     "periodic_boundaries": True,
+        # },
     }
 
     # Storage for all results

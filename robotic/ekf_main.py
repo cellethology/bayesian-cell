@@ -13,73 +13,30 @@ def create_default_config():
     """Create default configuration for EKF simulation."""
     return {
         # Arena parameters
-        "arena_min": -100.0,
-        "arena_max": 300.0,
-        "distance_tolerance": 2.0,
+        "arena_min": 0.0,
+        "arena_max": 200.0,
+        "distance_tolerance": 5.0,
         # Signal parameters
-        "signal_max": 40.0,  # c0 - maximum signal strength
-        "signal_decay": 0.05,  # lambda - signal decay rate
+        "signal_max": 50.0,  # c0 - maximum signal strength
+        "signal_decay": 0.01,  # lambda - signal decay rate
         # Robot parameters
-        "robot_start_pos": [40.0, 40.0],
-        "robot_step_size": 0.5,
-        "actuator_noise": 1,  # sigma_u - robot actuator noise
+        "robot_start_pos": [60.0, 60.0],
+        "robot_step_size": 0.3,
+        "actuator_noise": 0.5,  # sigma_u - robot actuator noise
         # Target parameters
-        "target_true_pos": [160.0, 160.0],
-        "target_motion_sigma": 0.5,  # target random walk noise
+        "target_true_pos": [140.0, 140.0],
+        "target_motion_sigma": 0.3,  # target random walk noise
         # EKF parameters
         "initial_belief_mean": [100.0, 100.0],  # broad prior mean
-        "initial_belief_variance": 100.0,  # broad prior variance
-        "baseline_process_noise": 0.5,  # sigma_Q baseline
+        "initial_belief_variance": 600.0,  # broad prior variance
+        "baseline_process_noise": 0.3,  # sigma_Q baseline
         "adaptive_process_noise": True,  # enable/disable adaptive noise
-        "alpha_R": 0.001,  # innovation-based measurement noise update rate
+        "alpha_R": 0.1,  # innovation-based measurement noise update rate
         "adaptive_measurement_noise": False,  # enable/disable adaptive measurement noise
         # Simulation parameters
-        "max_steps": 1000000,
-        "random_seed": 1,
+        "max_steps": 100000,
+        "random_seed": 2,
     }
-
-
-def create_adaptive_config():
-    """Create configuration with adaptive process noise enabled."""
-    config = create_default_config()
-    config.update(
-        {
-            "adaptive_process_noise": True,
-            "baseline_process_noise": 0.5,
-            "adaptive_measurement_noise": True,
-        }
-    )
-    return config
-
-
-def create_custom_config():
-    """Create a custom configuration - modify this for your experiments."""
-    config = create_default_config()
-
-    # Example customizations:
-    config.update(
-        {
-            # Try different signal parameters
-            "signal_max": 50.0,
-            "signal_decay": 0.02,
-            # Try different robot behavior
-            "robot_step_size": 0.5,
-            "actuator_noise": 0.1,
-            # Try adaptive process noise
-            "adaptive_process_noise": True,
-            "baseline_process_noise": 0.3,
-            # Try adaptive measurement noise
-            "adaptive_measurement_noise": True,
-            "alpha_R": 0.02,
-            # Different initial conditions
-            "robot_start_pos": [50.0, 50.0],
-            "target_true_pos": [150.0, 150.0],
-            # Different random seed
-            "random_seed": 123,
-        }
-    )
-
-    return config
 
 
 def run_single_simulation(config=None, config_name="Default", verbose=True):

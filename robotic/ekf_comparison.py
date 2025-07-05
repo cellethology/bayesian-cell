@@ -197,7 +197,7 @@ class EKFComparison:
                     len(successful_data)
                 )
                 print(
-                    f"  Mean steps to Target (successful): {successful_data['steps_to_target'].mean():.0f} ± {sem:.0f}"
+                    f"  Mean steps to Target: {successful_data['steps_to_target'].mean():.0f} ± {sem:.0f}"
                 )
 
     def create_comparison_plots(self, df: pd.DataFrame, figsize: tuple = (15, 10)):
@@ -1141,22 +1141,22 @@ if __name__ == "__main__":
 
     # Base configuration
     base_config = {
-        "arena_min": 0.0,
-        "arena_max": 200.0,
+        "arena_min": -100.0,
+        "arena_max": 100.0,
         "distance_tolerance": 5.0,
-        "signal_max": 10.0,
+        "signal_max": 50.0,
         "signal_decay": 0.05,
-        "robot_start_pos": [60.0, 60.0],
-        "robot_step_size": 0.3,
-        "actuator_noise": 0.5,
-        "target_true_pos": [140.0, 140.0],
-        "initial_belief_mean": [100.0, 100.0],
-        "initial_belief_variance": 10000.0,
+        "robot_start_pos": [-40.0, -40.0],
+        "robot_step_size": 0.6,
+        "actuator_noise": 1.2,
+        "target_true_pos": [40.0, 40.0],
+        "initial_belief_mean": [0.0, 0.0],
+        "initial_belief_variance": 1000.0,
         "target_motion_sigma": 0.5,
         "baseline_process_noise": 0.5,
-        "alpha_R": 0.5,
+        "alpha_R": 0.1,
         "adaptive_measurement_noise": False,
-        "max_steps": 1000000,
+        "max_steps": 3000000,
     }
 
     # Configurations to compare
@@ -1164,17 +1164,17 @@ if __name__ == "__main__":
         "Standard EKF": {
             "adaptive_process_noise": False,
             "adaptive_measurement_noise": False,
-            "periodic_boundaries": True,
+            "periodic_boundaries": False,
         },
-        "Adaptive Process EKF": {
+        "Signal-aware EKF": {
             "adaptive_process_noise": True,
             "adaptive_measurement_noise": False,
-            "periodic_boundaries": True,
+            "periodic_boundaries": False,
         },
-        # "Adaptive Measurement EKF": {
+        # "Adaptive EKF": {
         #     "adaptive_process_noise": False,
         #     "adaptive_measurement_noise": True,
-        #     "periodic_boundaries": True,
+        #     "periodic_boundaries": False,
         # },
     }
 
@@ -1183,7 +1183,7 @@ if __name__ == "__main__":
     for name, config in configs_to_compare.items():
         comparison.add_config(name, config)
 
-    # results = comparison.run_comparison(n_runs=500, max_steps=1000000)
+    # results = comparison.run_comparison(n_runs=50, max_steps=200000)
     # plots = comparison.create_comparison_plots(results)
 
     # # Create mean plot with confidence intervals
@@ -1191,8 +1191,8 @@ if __name__ == "__main__":
 
     # # Perform statistical tests
     # comparisons = [
-    #     ("Standard EKF", "Adaptive Process EKF"),
-    #     ("Standard EKF", "Adaptive Measurement EKF"),
+    #     ("Standard EKF", "Signal-aware EKF"),
+    #     ("Standard EKF", "Adaptive EKF"),
     # ]
 
     # print(f"\nPaired t-test results:")
@@ -1206,10 +1206,10 @@ if __name__ == "__main__":
     #     print(f"  Significant: {test_results['significant']}")
     #     print(f"  Cohen's d: {test_results['cohens_d']:.4f}")
 
-    # # Plot trajectory comparisons - compare periodic vs non-periodic
+    # Plot trajectory comparisons - compare periodic vs non-periodic
     print("\n=== Generating EKF Trajectory Comparison Plots ===")
     trajectory_data = comparison.run_trajectory_comparison(
-        "Standard EKF", "Adaptive Process EKF", n_runs=1, max_steps=10000, seed=195
+        "Standard EKF", "Signal-aware EKF", n_runs=1, max_steps=10000, seed=2
     )
 
     # Plot single run comparison
@@ -1220,7 +1220,6 @@ if __name__ == "__main__":
         save_path="ekf_trajectory_comparison_separate.png",
     )
 
-    # Plot all runs comparison
     # all_runs_fig = comparison.plot_trajectory_comparison_all_runs(
     #     trajectory_data,
     #     step_size=5,

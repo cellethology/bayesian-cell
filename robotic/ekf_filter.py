@@ -5,7 +5,7 @@ Supports adaptive process noise based on signal strength.
 
 import numpy as np
 
-eps = 0.001
+eps = 1
 
 
 class ExtendedKalmanFilter:
@@ -34,6 +34,9 @@ class ExtendedKalmanFilter:
         # Initialize state
         self.mu = np.array(config.get("initial_belief_mean", [100.0, 100.0]))
         self.Sigma = np.eye(2) * config.get("initial_belief_variance", 100.0)
+
+        # Ensure positive definiteness
+        self.Sigma += 1e-10 * np.eye(2)
 
         # Set measurement noise based on initial geometry
         initial_robot_pos = np.array(config.get("robot_start_pos", [80.0, 80.0]))
@@ -87,7 +90,9 @@ class ExtendedKalmanFilter:
 
         # 4. Innovation and Kalman gain
         innovation = measurement - h_pred
-        S = (H @ Sigma_pred @ H.T + R).item() + 1e-12  # scalar innovation covariance with numerical stability
+        S = (
+            H @ Sigma_pred @ H.T + R
+        ).item() + 1e-12  # scalar innovation covariance with numerical stability
         K = (Sigma_pred @ H.T / S).reshape(
             2,
         )  # Kalman gain vector
@@ -96,8 +101,11 @@ class ExtendedKalmanFilter:
         self.mu = mu_pred + K * innovation
         self.Sigma = (np.eye(2) - np.outer(K, H)) @ Sigma_pred
 
-        # Numerical stability: ensure covariance symmetry
+        # Numerical stability: ensure covariance symmetry and positive definiteness
         self.Sigma = 0.5 * (self.Sigma + self.Sigma.T)
+
+        # Add small regularization to diagonal to ensure positive definiteness
+        self.Sigma += 1e-10 * np.eye(2)
 
         # 6. Adaptive measurement noise updates (innovation-based)
         if self.adaptive_measurement_noise:
@@ -130,6 +138,9 @@ class ExtendedKalmanFilter:
             self.Sigma = initial_covariance
         else:
             self.Sigma = np.eye(2) * self.config.get("initial_belief_variance", 100.0)
+
+        # Ensure positive definiteness
+        self.Sigma += 1e-10 * np.eye(2)
 
         self.sigma_history = []
         self.R_est_history = []

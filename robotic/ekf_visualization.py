@@ -201,7 +201,9 @@ class EKFVisualizer:
 
         # Compute belief probability at each point
         pos = np.dstack((X, Y))
-        rv = multivariate_normal(mu, Sigma)
+        # Ensure positive definiteness for visualization
+        Sigma_vis = Sigma + 1e-8 * np.eye(2)
+        rv = multivariate_normal(mu, Sigma_vis)
         belief_grid = rv.pdf(pos)
 
         # Plot belief as heatmap
