@@ -1147,13 +1147,13 @@ if __name__ == "__main__":
         "signal_max": 50.0,
         "signal_decay": 0.05,
         "robot_start_pos": [-40.0, -40.0],
-        "robot_step_size": 0.6,
-        "actuator_noise": 1.2,
+        "robot_step_size": 0.3,
+        "actuator_noise": 0.5,
         "target_true_pos": [40.0, 40.0],
         "initial_belief_mean": [0.0, 0.0],
         "initial_belief_variance": 1000.0,
-        "target_motion_sigma": 0.5,
-        "baseline_process_noise": 0.5,
+        "target_motion_sigma": 0.4,
+        "baseline_process_noise": 0.4,
         "alpha_R": 0.1,
         "adaptive_measurement_noise": False,
         "max_steps": 3000000,
@@ -1161,20 +1161,35 @@ if __name__ == "__main__":
 
     # Configurations to compare
     configs_to_compare = {
-        "Standard EKF": {
+        "Standard KF": {
+            "filter_type": "UKF",
             "adaptive_process_noise": False,
             "adaptive_measurement_noise": False,
-            "periodic_boundaries": False,
+            "ukf_alpha": 0.01,
+            "ukf_kappa": 0.0,
         },
-        "Signal-aware EKF": {
+        "Signal-aware KF": {
+            "filter_type": "UKF",
             "adaptive_process_noise": True,
             "adaptive_measurement_noise": False,
-            "periodic_boundaries": False,
+            "ukf_alpha": 0.01,
+            "ukf_kappa": 0.0,
         },
-        # "Adaptive EKF": {
+        # "Standard UKF": {
+        #     "filter_type": "UKF",
         #     "adaptive_process_noise": False,
-        #     "adaptive_measurement_noise": True,
-        #     "periodic_boundaries": False,
+        #     "adaptive_measurement_noise": False,
+        #     "ukf_alpha": 0.01,
+        #     "ukf_beta": 2.0,
+        #     "ukf_kappa": 0.0,
+        # },
+        # "Adaptive UKF": {
+        #     "filter_type": "UKF",
+        #     "adaptive_process_noise": True,
+        #     "adaptive_measurement_noise": False,
+        #     "ukf_alpha": 0.001,
+        #     "ukf_beta": 2.0,
+        #     "ukf_kappa": 0.0,
         # },
     }
 
@@ -1183,7 +1198,7 @@ if __name__ == "__main__":
     for name, config in configs_to_compare.items():
         comparison.add_config(name, config)
 
-    # results = comparison.run_comparison(n_runs=50, max_steps=200000)
+    # results = comparison.run_comparison(n_runs=50, max_steps=1000000)
     # plots = comparison.create_comparison_plots(results)
 
     # # Create mean plot with confidence intervals
@@ -1209,7 +1224,7 @@ if __name__ == "__main__":
     # Plot trajectory comparisons - compare periodic vs non-periodic
     print("\n=== Generating EKF Trajectory Comparison Plots ===")
     trajectory_data = comparison.run_trajectory_comparison(
-        "Standard EKF", "Signal-aware EKF", n_runs=1, max_steps=10000, seed=2
+        "Standard KF", "Signal-aware KF", n_runs=1, max_steps=5000, seed=32
     )
 
     # Plot single run comparison

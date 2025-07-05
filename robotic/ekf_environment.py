@@ -1,14 +1,19 @@
 """
 EKF Environment that orchestrates target tracking simulation.
 Main coordinator for Extended Kalman Filter navigation simulation.
+Now supports both EKF and UKF through unified interface.
 """
 
 import numpy as np
-from ekf_filter import ExtendedKalmanFilter
+from filter_factory import FilterFactory
 
 
 class EKFEnvironment:
-    """Main EKF environment that coordinates target tracking simulation."""
+    """Main tracking environment that coordinates target tracking simulation.
+    
+    Supports both Extended Kalman Filter (EKF) and Unscented Kalman Filter (UKF)
+    through unified interface.
+    """
 
     def __init__(self, config=None, verbose=False):
         """
@@ -58,8 +63,14 @@ class EKFEnvironment:
         self.robot_pos = np.array(self.config["robot_start_pos"], dtype=float)
         self.target_pos = np.array(self.config["target_true_pos"], dtype=float)
 
-        # Initialize EKF
-        self.ekf = ExtendedKalmanFilter(self.config)
+        # Initialize filter (EKF or UKF based on config)
+        # Set default filter type if not specified
+        if "filter_type" not in self.config:
+            self.config["filter_type"] = "EKF"
+        
+        self.filter = FilterFactory.create_filter(self.config)
+        # Keep backward compatibility
+        self.ekf = self.filter
 
         # Pre-allocate trajectory storage for better performance
         max_steps = self.config.get("max_steps", 1000000)
@@ -73,10 +84,18 @@ class EKFEnvironment:
         self.trajectory_length = 1  # Track current length
 
         if verbose:
-            print(f"EKF Environment initialized:")
+            filter_type = self.config.get("filter_type", "EKF")
+            print(f"Tracking Environment initialized with {filter_type}:")
             print(f"  Robot start: {self.robot_pos}")
             print(f"  Target start: {self.target_pos}")
+            print(f"  Filter type: {filter_type}")
             print(f"  Adaptive process noise: {self.config['adaptive_process_noise']}")
+            
+            # Show UKF-specific parameters if using UKF
+            if filter_type == "UKF":
+                print(f"  UKF alpha: {self.config.get('ukf_alpha', 0.001)}")
+                print(f"  UKF beta: {self.config.get('ukf_beta', 2.0)}")
+                print(f"  UKF kappa: {self.config.get('ukf_kappa', 0.0)}")
 
     def _clip_position(self, pos):
         """Clip position to arena boundaries."""

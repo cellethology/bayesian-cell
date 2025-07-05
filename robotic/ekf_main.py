@@ -26,17 +26,37 @@ def create_default_config():
         # Target parameters
         "target_true_pos": [140.0, 140.0],
         "target_motion_sigma": 0.3,  # target random walk noise
-        # EKF parameters
+        # Filter parameters
+        "filter_type": "EKF",  # "EKF" or "UKF"
         "initial_belief_mean": [100.0, 100.0],  # broad prior mean
         "initial_belief_variance": 600.0,  # broad prior variance
         "baseline_process_noise": 0.3,  # sigma_Q baseline
         "adaptive_process_noise": True,  # enable/disable adaptive noise
         "alpha_R": 0.1,  # innovation-based measurement noise update rate
         "adaptive_measurement_noise": False,  # enable/disable adaptive measurement noise
+        # UKF-specific parameters (ignored if using EKF)
+        "ukf_alpha": 0.001,  # UKF spread parameter
+        "ukf_beta": 2.0,     # UKF distribution parameter
+        "ukf_kappa": 0.0,    # UKF secondary scaling parameter
         # Simulation parameters
         "max_steps": 100000,
         "random_seed": 2,
     }
+
+
+def create_ukf_config():
+    """Create configuration optimized for UKF simulation."""
+    config = create_default_config()
+    config.update({
+        "filter_type": "UKF",
+        # UKF works better with slightly different parameters
+        "ukf_alpha": 0.001,   # Small spread for stable performance
+        "ukf_beta": 2.0,      # Optimal for Gaussian distributions
+        "ukf_kappa": 0.0,     # Default secondary scaling
+        # You can adjust these for better UKF performance
+        "baseline_process_noise": 0.2,  # UKF often works well with lower process noise
+    })
+    return config
 
 
 def run_single_simulation(config=None, config_name="Default", verbose=True):
@@ -117,23 +137,29 @@ def run_single_simulation(config=None, config_name="Default", verbose=True):
 
 
 def main():
-    """Main function to run EKF simulation and create visualizations."""
-    print("EKF Target Tracking Simulation")
-    print("==============================")
+    """Main function to run tracking simulation and create visualizations."""
+    print("Target Tracking Simulation (EKF/UKF)")
+    print("=====================================")
 
     # You can choose which configuration to run by uncommenting one of these:
 
-    # Option 1: Default configuration (non-adaptive)
+    # Option 1: Default EKF configuration
     config = create_default_config()
-    config_name = "Default (Non-Adaptive)"
+    config_name = "Default EKF"
 
-    # Option 2: Adaptive configuration
-    # config = create_adaptive_config()
-    # config_name = "Adaptive Process & Measurement Noise"
+    # Option 2: UKF configuration  
+    # config = create_ukf_config()
+    # config_name = "Default UKF"
 
-    # Option 3: Custom configuration
-    # config = create_custom_config()
-    # config_name = "Custom Configuration"
+    # Option 3: Custom EKF configuration
+    # config = create_default_config()
+    # config["adaptive_process_noise"] = False  # Turn off adaptive noise
+    # config_name = "Non-Adaptive EKF"
+
+    # Option 4: Custom UKF configuration
+    # config = create_ukf_config()
+    # config["ukf_alpha"] = 0.01  # Larger spread for more exploration
+    # config_name = "High-Alpha UKF"
 
     # Run simulation
     results = run_single_simulation(config, config_name, verbose=True)
