@@ -1162,35 +1162,15 @@ if __name__ == "__main__":
     # Configurations to compare
     configs_to_compare = {
         "Standard KF": {
-            "filter_type": "UKF",
+            "filter_type": "EKF",
             "adaptive_process_noise": False,
             "adaptive_measurement_noise": False,
-            "ukf_alpha": 0.01,
-            "ukf_kappa": 0.0,
         },
         "Signal-aware KF": {
-            "filter_type": "UKF",
+            "filter_type": "EKF",
             "adaptive_process_noise": True,
             "adaptive_measurement_noise": False,
-            "ukf_alpha": 0.01,
-            "ukf_kappa": 0.0,
         },
-        # "Standard UKF": {
-        #     "filter_type": "UKF",
-        #     "adaptive_process_noise": False,
-        #     "adaptive_measurement_noise": False,
-        #     "ukf_alpha": 0.01,
-        #     "ukf_beta": 2.0,
-        #     "ukf_kappa": 0.0,
-        # },
-        # "Adaptive UKF": {
-        #     "filter_type": "UKF",
-        #     "adaptive_process_noise": True,
-        #     "adaptive_measurement_noise": False,
-        #     "ukf_alpha": 0.001,
-        #     "ukf_beta": 2.0,
-        #     "ukf_kappa": 0.0,
-        # },
     }
 
     # Run comparison
@@ -1198,8 +1178,8 @@ if __name__ == "__main__":
     for name, config in configs_to_compare.items():
         comparison.add_config(name, config)
 
-    # results = comparison.run_comparison(n_runs=50, max_steps=1000000)
-    # plots = comparison.create_comparison_plots(results)
+    results = comparison.run_comparison(n_runs=50, max_steps=1000000)
+    plots = comparison.create_comparison_plots(results)
 
     # # Create mean plot with confidence intervals
     # ci_plot = comparison.create_mean_plot_with_ci(results, show_plot=False)
