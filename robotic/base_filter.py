@@ -107,7 +107,7 @@ class BaseFilter(ABC):
         """Determine process noise (adaptive or fixed)."""
         if self.is_adaptive:
             # Use configurable epsilon to avoid division by zero, and add bounds
-            sigma_Q_current = self.sigma_Q / (self.eps + measurement)
+            sigma_Q_current = self.sigma_Q / np.sqrt(self.eps + measurement)
             # print(f"sigma_Q_current: {sigma_Q_current}")
             # Add bounds to prevent extreme values
             sigma_Q_current = np.clip(sigma_Q_current, 0.001, 5.0)
