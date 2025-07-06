@@ -6,7 +6,7 @@ Compares Standard KF, Signal-aware KF, and Adaptive KF across different signal d
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
-from multi_config_comparison import MultiConfigComparison
+from histogram_filter.multi_config_comparison import MultiConfigComparison
 import seaborn as sns
 
 
