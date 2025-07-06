@@ -6,6 +6,7 @@ Compares Standard EKF, Adaptive Process EKF, and Adaptive Measurement EKF across
 import numpy as np
 import pandas as pd
 from ekf_comparison import EKFComparison
+from base_config import get_base_config, get_method_configs, get_signal_max_study_config
 
 
 def bootstrap_median_ci(data, n_bootstrap=1000, confidence=0.95):
@@ -47,59 +48,29 @@ def run_signal_max_comparison():
     """
     print("=== Signal Max Comparison Study ===")
 
-    # Fixed parameters
-    signal_decay = 0.05
-    n_runs = 20  # Reasonable number for bootstrap CI
-    max_steps = 500000
+    # Load configurations from base_config.py
+    base_config = get_base_config()
+    method_configs = get_method_configs()
+    study_config = get_signal_max_study_config()
 
-    # Variable parameter: signal_max values
-    signal_max_values = np.linspace(5, 5, 1)
+    # Extract study parameters
+    signal_decay = study_config["signal_decay"]
+    n_runs = study_config["n_runs"]
+    max_steps = study_config["max_steps"]
+    signal_max_values = np.array(study_config["signal_max_values"])
 
-    print(f"Fixed signal_decay: {signal_decay}")
+    # Update base config with study-specific parameters
+    base_config.update(
+        {
+            "signal_decay": signal_decay,
+            "max_steps": max_steps,
+        }
+    )
+
+    print(f"Signal decay: {signal_decay}")
     print(f"Signal max values: {signal_max_values}")
-    print(f"Number of signal_max values: {len(signal_max_values)}")
     print(f"Runs per configuration: {n_runs}")
-    print(f"Total simulations: {len(signal_max_values) * 3 * n_runs}")
-
-    # Base configuration (shared parameters)
-    base_config = {
-        "filter_type": "FilterPy_EKF_Corrected",
-        "arena_min": -1000.0,
-        "arena_max": 1000.0,
-        "distance_tolerance": 5.0,
-        "signal_decay": signal_decay,  # Fixed
-        "robot_start_pos": [-20.0, -20.0],
-        "robot_step_size": 0.3,
-        "actuator_noise": 0.5,
-        "target_true_pos": [20.0, 20.0],
-        "initial_belief_mean": [0.0, 0.0],
-        "initial_belief_variance": 1000.0,
-        "target_motion_sigma": 0.5,
-        "baseline_process_noise": 0.5,
-        "alpha_R": 0.5,
-        "adaptive_measurement_noise": False,
-        "eps": 1.0,  # Epsilon parameter for adaptive process noise
-        "max_steps": max_steps,
-    }
-
-    # Three configurations to compare
-    method_configs = {
-        "Standard EKF": {
-            "adaptive_process_noise": False,
-            "adaptive_measurement_noise": False,
-            "periodic_boundaries": False,
-        },
-        "Signal-aware EKF": {
-            "adaptive_process_noise": True,
-            "adaptive_measurement_noise": False,
-            "periodic_boundaries": True,
-        },
-        "Adaptive EKF": {
-            "adaptive_process_noise": False,
-            "adaptive_measurement_noise": True,
-            "periodic_boundaries": True,
-        },
-    }
+    print(f"Total simulations: {len(signal_max_values) * len(method_configs) * n_runs}")
 
     # Storage for all results
     all_results = []
@@ -150,19 +121,12 @@ def run_signal_max_comparison():
             else:
                 print(f"  {method}: No successful runs")
 
-    # Combine all results
-    print(f"\n{'='*60}")
-    print("COMBINING RESULTS AND CREATING PLOT")
-    print(f"{'='*60}")
-
     combined_results = pd.concat(all_results, ignore_index=True)
 
     # Save all results to CSV
     results_filename = "signal_max_comparison_results.csv"
     combined_results.to_csv(results_filename, index=False)
     print(f"All results saved to {results_filename}")
-
-    print(f"Data collection complete! Use plot_signal_max_results.py to create plots.")
 
     return combined_results
 
@@ -177,10 +141,3 @@ if __name__ == "__main__":
     print(f"\n{'='*60}")
     print("SIGNAL MAX COMPARISON COMPLETE")
     print(f"{'='*60}")
-    print("Files created:")
-    print("  - signal_max_comparison_results.csv (all raw results)")
-    print("\nTo create plots, run:")
-    print("  python plot_signal_max_results.py")
-    print("\nOr import and use specific plotting functions:")
-    print("  from plot_signal_max_results import quick_plot")
-    print("  quick_plot('signal_max_comparison_results.csv', 'median')")
