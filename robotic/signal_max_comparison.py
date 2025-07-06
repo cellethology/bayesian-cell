@@ -4,7 +4,6 @@ Compares Standard EKF, Adaptive Process EKF, and Adaptive Measurement EKF across
 """
 
 import numpy as np
-import matplotlib.pyplot as plt
 import pandas as pd
 from ekf_comparison import EKFComparison
 
@@ -64,6 +63,7 @@ def run_signal_max_comparison():
 
     # Base configuration (shared parameters)
     base_config = {
+        "filter_type": "FilterPy_EKF_Corrected",
         "arena_min": -1000.0,
         "arena_max": 1000.0,
         "distance_tolerance": 5.0,
@@ -74,10 +74,11 @@ def run_signal_max_comparison():
         "target_true_pos": [20.0, 20.0],
         "initial_belief_mean": [0.0, 0.0],
         "initial_belief_variance": 1000.0,
-        "target_motion_sigma": 0.01,
-        "baseline_process_noise": 0.01,
+        "target_motion_sigma": 0.5,
+        "baseline_process_noise": 0.5,
         "alpha_R": 0.5,
         "adaptive_measurement_noise": False,
+        "eps": 1.0,  # Epsilon parameter for adaptive process noise
         "max_steps": max_steps,
     }
 
@@ -88,16 +89,16 @@ def run_signal_max_comparison():
             "adaptive_measurement_noise": False,
             "periodic_boundaries": False,
         },
-        # "Signal-aware EKF": {
-        #     "adaptive_process_noise": True,
-        #     "adaptive_measurement_noise": False,
-        #     "periodic_boundaries": True,
-        # },
-        # "Adaptive EKF": {
-        #     "adaptive_process_noise": False,
-        #     "adaptive_measurement_noise": True,
-        #     "periodic_boundaries": True,
-        # },
+        "Signal-aware EKF": {
+            "adaptive_process_noise": True,
+            "adaptive_measurement_noise": False,
+            "periodic_boundaries": True,
+        },
+        "Adaptive EKF": {
+            "adaptive_process_noise": False,
+            "adaptive_measurement_noise": True,
+            "periodic_boundaries": True,
+        },
     }
 
     # Storage for all results

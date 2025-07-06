@@ -6,8 +6,6 @@ Supports adaptive process noise based on signal strength.
 import numpy as np
 from base_filter import BaseFilter
 
-eps = 1
-
 
 class ExtendedKalmanFilter(BaseFilter):
     """Extended Kalman Filter for target tracking with signal-based observations."""
@@ -41,7 +39,7 @@ class ExtendedKalmanFilter(BaseFilter):
         # 1. Determine process noise (adaptive or fixed)
         sigma_Q_current = self._determine_process_noise(measurement)
         Q = (sigma_Q_current**2) * np.eye(2)
-        
+
         # Store for visualization
         self.sigma_history.append(sigma_Q_current)
         self.R_est_history.append(self.R_est)
@@ -75,4 +73,3 @@ class ExtendedKalmanFilter(BaseFilter):
         self._update_adaptive_measurement_noise(innovation)
 
         return self.mu.copy(), self.Sigma.copy(), sigma_Q_current
-

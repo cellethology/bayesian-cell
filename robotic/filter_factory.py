@@ -80,6 +80,7 @@ class FilterFactory:
             "adaptive_process_noise": True,
             "alpha_R": 0.1,
             "adaptive_measurement_noise": False,
+            "eps": 1.0,  # Epsilon parameter for adaptive process noise
             # Simulation parameters
             "max_steps": 100000,
             "random_seed": 42,
@@ -146,10 +147,27 @@ class FilterFactory:
             "signal_max", "signal_decay", "initial_belief_mean", 
             "initial_belief_variance", "baseline_process_noise"
         ]
+        
+        # Optional parameters with defaults
+        optional_params = {
+            "eps": 1.0,
+            "alpha_R": 0.1,
+            "adaptive_process_noise": False,
+            "adaptive_measurement_noise": False
+        }
 
         for key in required_keys:
             if key not in config:
                 raise ValueError(f"Missing required configuration key: {key}")
+
+        # Set defaults for optional parameters
+        for key, default_value in optional_params.items():
+            if key not in config:
+                config[key] = default_value
+
+        # Validate eps parameter
+        if config.get("eps", 1.0) <= 0:
+            raise ValueError("eps must be positive (> 0)")
 
         filter_type = config.get("filter_type", "EKF").upper()
         

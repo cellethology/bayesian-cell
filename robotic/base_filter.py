@@ -29,6 +29,7 @@ class BaseFilter(ABC):
         self.adaptive_measurement_noise = config.get(
             "adaptive_measurement_noise", False
         )
+        self.eps = config.get("eps", 1.0)
 
         # Initialize state
         self.mu = np.array(config.get("initial_belief_mean", [100.0, 100.0]))
@@ -105,9 +106,8 @@ class BaseFilter(ABC):
     def _determine_process_noise(self, measurement):
         """Determine process noise (adaptive or fixed)."""
         if self.is_adaptive:
-            # Use small epsilon to avoid division by zero, and add bounds
-            eps = 1
-            sigma_Q_current = self.sigma_Q / (eps + measurement)
+            # Use configurable epsilon to avoid division by zero, and add bounds
+            sigma_Q_current = self.sigma_Q / (self.eps + measurement)
             # print(f"sigma_Q_current: {sigma_Q_current}")
             # Add bounds to prevent extreme values
             sigma_Q_current = np.clip(sigma_Q_current, 0.001, 5.0)
