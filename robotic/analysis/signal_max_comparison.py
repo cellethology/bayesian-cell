@@ -13,7 +13,7 @@ if __name__ == "__main__":
 
 import numpy as np
 import pandas as pd
-from analysis.comparison import EKFComparison
+from analysis.comparison import FilterComparison
 from core import get_base_config, get_method_configs, get_signal_max_study_config
 
 
@@ -58,7 +58,7 @@ def run_signal_max_comparison(inspect_trajectory=False):
         current_base_config["signal_max"] = signal_max
 
         # Create comparison for this signal_max value
-        comparison = EKFComparison(current_base_config)
+        comparison = FilterComparison(current_base_config)
 
         # Add all three configurations
         for method_name, method_config in method_configs.items():
@@ -85,12 +85,10 @@ def run_signal_max_comparison(inspect_trajectory=False):
                 results, "Signal-aware EKF", "Standard EKF"
             )
 
-            # Print the results nicely
+            # Print the results
             print(f"  Paired observations: {test_results['n_pairs']}")
             print(f"  Mean difference: {test_results['mean_difference']:.1f}")
-            print(f"  t-statistic: {test_results['t_statistic']:.3f}")
             print(f"  p-value: {test_results['p_value']:.6f}")
-            print(f"  Cohen's d: {test_results['cohens_d']:.3f}")
 
         else:
             print("Generating trajectory comparison...")

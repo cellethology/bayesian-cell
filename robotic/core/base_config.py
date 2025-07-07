@@ -35,7 +35,6 @@ def get_base_config():
         "baseline_process_noise": 1.0,  # Higher process noise reduces oscillations
         "adaptive_process_noise": False,
         "eps": 1.0,  # Epsilon parameter for adaptive process noise
-        # Measurement noise parameters
         "adaptive_measurement_noise": False,
         "alpha_R": 0.01,  # Lower learning rate for more stable estimates
         # Simulation parameters

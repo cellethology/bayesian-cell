@@ -83,11 +83,6 @@ def run_single_ekf_simulation(args):
     sigma_std = (
         np.std(results["sigma_history"]) if len(results["sigma_history"]) > 0 else 0.0
     )
-    sigma_final = (
-        results["sigma_history"][-1]
-        if len(results["sigma_history"]) > 0
-        else config.get("baseline_process_noise", 0.5)
-    )
 
     performance_metrics = {
         "config_name": config_name,
@@ -113,14 +108,14 @@ def run_single_ekf_simulation(args):
         return performance_metrics
 
 
-class EKFComparison:
+class FilterComparison:
     """
-    Multi-configuration comparison tool for EKF simulations.
+    Multi-configuration comparison tool for filter simulations.
 
     Usage:
-        comparison = EKFComparison()
-        comparison.add_config("Standard EKF", standard_config)
-        comparison.add_config("Adaptive EKF", adaptive_config)
+        comparison = FilterComparison()
+        comparison.add_config("Standard Filter", standard_config)
+        comparison.add_config("Adaptive Filter", adaptive_config)
         results = comparison.run_comparison(n_runs=20)
         comparison.create_comparison_plots(results)
     """
@@ -175,7 +170,7 @@ class EKFComparison:
             raise ValueError("No configurations added. Use add_config() first.")
 
         print(
-            f"Running EKF comparison of {len(self.configs)} configurations with {n_runs} runs each..."
+            f"Running filter comparison of {len(self.configs)} configurations with {n_runs} runs each..."
         )
 
         # Create all tasks - use same seed for target, different for robot
@@ -203,7 +198,7 @@ class EKFComparison:
             for result in tqdm(
                 pool.imap_unordered(run_single_ekf_simulation, tasks),
                 total=len(tasks),
-                desc="Running EKF simulations",
+                desc="Running filter simulations",
             ):
                 results.append(result)
 
@@ -227,7 +222,7 @@ class EKFComparison:
     def _print_summary_statistics(self, df: pd.DataFrame):
         """Print summary statistics for each configuration."""
         print("=" * 70)
-        print("EKF CONFIGURATION COMPARISON SUMMARY")
+        print("FILTER CONFIGURATION COMPARISON SUMMARY")
         print("=" * 70)
 
         for config_name in self.config_order:
@@ -1232,7 +1227,6 @@ class EKFComparison:
             current_pos = trajectory[i]
             next_pos = trajectory[i + 1]
 
-
             ax.plot(
                 [current_pos[0], next_pos[0]],
                 [current_pos[1], next_pos[1]],
@@ -1260,15 +1254,14 @@ class EKFComparison:
         )
 
 
-
-def quick_ekf_compare(
+def quick_filter_compare(
     configs: Dict[str, Dict],
     base_config: Optional[Dict] = None,
     n_runs: int = 10,
     max_steps: int = 1000000,
 ):
     """
-    Quick comparison function for EKF configurations.
+    Quick comparison function for filter configurations.
 
     Args:
         configs: Dictionary of {name: config} pairs
@@ -1279,7 +1272,7 @@ def quick_ekf_compare(
     Returns:
         tuple: (results_dataframe, comparison_plots_figure)
     """
-    comparison = EKFComparison(base_config)
+    comparison = FilterComparison(base_config)
 
     for name, config in configs.items():
         comparison.add_config(name, config)
@@ -1292,7 +1285,7 @@ def quick_ekf_compare(
 
 if __name__ == "__main__":
     # Example usage
-    print("=== EKF Multi-Configuration Comparison Example ===")
+    print("=== Filter Multi-Configuration Comparison Example ===")
 
     # Base configuration
     base_config = {
@@ -1316,12 +1309,12 @@ if __name__ == "__main__":
 
     # Configurations to compare
     configs_to_compare = {
-        "Standard KF": {
+        "Standard Filter": {
             "filter_type": "EKF",
             "adaptive_process_noise": False,
             "adaptive_measurement_noise": False,
         },
-        "Signal-aware KF": {
+        "Signal-aware Filter": {
             "filter_type": "EKF",
             "adaptive_process_noise": True,
             "adaptive_measurement_noise": False,
@@ -1329,7 +1322,7 @@ if __name__ == "__main__":
     }
 
     # Run comparison
-    comparison = EKFComparison(base_config)
+    comparison = FilterComparison(base_config)
     for name, config in configs_to_compare.items():
         comparison.add_config(name, config)
 
@@ -1356,10 +1349,10 @@ if __name__ == "__main__":
     #     print(f"  Significant: {test_results['significant']}")
     #     print(f"  Cohen's d: {test_results['cohens_d']:.4f}")
 
-    # Plot trajectory comparisons - compare periodic vs non-periodic
-    print("\n=== Generating EKF Trajectory Comparison Plots ===")
+    # Plot trajectory comparisons
+    print("\n=== Generating Filter Trajectory Comparison Plots ===")
     trajectory_data = comparison.run_trajectory_comparison(
-        "Standard KF", "Signal-aware KF", n_runs=1, max_steps=5000, seed=32
+        "Standard Filter", "Signal-aware Filter", n_runs=1, max_steps=5000, seed=32
     )
 
     # Plot single run comparison
@@ -1367,13 +1360,13 @@ if __name__ == "__main__":
         trajectory_data,
         run_index=0,
         step_size=1,
-        save_path="ekf_trajectory_comparison_separate.png",
+        save_path="filter_trajectory_comparison_separate.png",
     )
 
     # all_runs_fig = comparison.plot_trajectory_comparison_all_runs(
     #     trajectory_data,
     #     step_size=5,
-    #     save_path="ekf_trajectory_comparison_all_runs.png",
+    #     save_path="filter_trajectory_comparison_all_runs.png",
     #     show_plot=False,
     # )
 
