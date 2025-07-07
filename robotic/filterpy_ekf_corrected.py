@@ -39,31 +39,29 @@ class FilterPyExtendedKalmanFilterCorrected(BaseFilter):
     def _hx(self, x):
         """
         Measurement function for FilterPy EKF.
-        
+
         Args:
             x: State vector [x, y]
-            
+
         Returns:
             z: Expected measurement (scalar in array)
         """
-        # Get current robot position from stored value
-        robot_pos = getattr(self, '_current_robot_pos', np.array([0.0, 0.0]))
-        signal = self._h(x, robot_pos)
+        signal = self._h(x, self._current_robot_pos)
         return np.array([signal])
 
     def _HJacobian(self, x):
         """
         Jacobian of measurement function for FilterPy EKF.
-        
+
         Args:
             x: State vector [x, y]
-            
+
         Returns:
             H: Jacobian matrix (1x2)
         """
         # Get current robot position from stored value
-        robot_pos = getattr(self, '_current_robot_pos', np.array([0.0, 0.0]))
-        
+        robot_pos = getattr(self, "_current_robot_pos", np.array([0.0, 0.0]))
+
         d = np.linalg.norm(x - robot_pos) + 1e-9  # avoid division by zero
         h_val = self._h(x, robot_pos)
         jacobian = (-self.lam * h_val * (x - robot_pos) / d).reshape(1, 2)
@@ -86,17 +84,17 @@ class FilterPyExtendedKalmanFilterCorrected(BaseFilter):
         # 1. Determine process noise (adaptive or fixed)
         sigma_Q_current = self._determine_process_noise(measurement)
         Q = (sigma_Q_current**2) * np.eye(2)
-        
+
         # Store for visualization
         self.sigma_history.append(sigma_Q_current)
         self.R_est_history.append(self.R_est)
 
         # 2. Update FilterPy filter parameters
         self.filterpy_ekf.Q = Q
-        
-        # Set measurement noise
+
+        # Set measurement noise (add small numerical stability term)
         R_current = self.R_est if self.adaptive_measurement_noise else self.sigma_z**2
-        self.filterpy_ekf.R = np.array([[R_current]])
+        self.filterpy_ekf.R = np.array([[R_current + 1e-12]])
 
         # 3. Prediction step (FilterPy handles this)
         self.filterpy_ekf.predict()
@@ -119,7 +117,7 @@ class FilterPyExtendedKalmanFilterCorrected(BaseFilter):
         """Reset filter to initial state."""
         # Call parent reset
         super().reset(initial_mean, initial_covariance)
-        
+
         # Update FilterPy filter
         self.filterpy_ekf.x = self.mu.copy()
         self.filterpy_ekf.P = self.Sigma.copy()
@@ -132,10 +130,22 @@ class FilterPyExtendedKalmanFilterCorrected(BaseFilter):
 
     def get_innovation_stats(self):
         """Get innovation statistics from FilterPy filter."""
-        if hasattr(self.filterpy_ekf, 'y') and hasattr(self.filterpy_ekf, 'S'):
+        if hasattr(self.filterpy_ekf, "y") and hasattr(self.filterpy_ekf, "S"):
             return {
-                'innovation': self.filterpy_ekf.y.copy() if self.filterpy_ekf.y is not None else None,
-                'innovation_covariance': self.filterpy_ekf.S.copy() if self.filterpy_ekf.S is not None else None,
-                'log_likelihood': self.filterpy_ekf.log_likelihood if hasattr(self.filterpy_ekf, 'log_likelihood') else None
+                "innovation": (
+                    self.filterpy_ekf.y.copy()
+                    if self.filterpy_ekf.y is not None
+                    else None
+                ),
+                "innovation_covariance": (
+                    self.filterpy_ekf.S.copy()
+                    if self.filterpy_ekf.S is not None
+                    else None
+                ),
+                "log_likelihood": (
+                    self.filterpy_ekf.log_likelihood
+                    if hasattr(self.filterpy_ekf, "log_likelihood")
+                    else None
+                ),
             }
         return None

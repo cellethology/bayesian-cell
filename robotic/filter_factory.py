@@ -5,8 +5,6 @@ Provides unified interface for filter creation and validation.
 
 from ekf_filter import ExtendedKalmanFilter
 from ukf_filter import UnscentedKalmanFilter
-from filterpy_ekf import FilterPyExtendedKalmanFilter
-from filterpy_ukf import FilterPyUnscentedKalmanFilter
 from filterpy_ekf_corrected import FilterPyExtendedKalmanFilterCorrected
 from filterpy_ukf_corrected import FilterPyUnscentedKalmanFilterCorrected
 
@@ -35,16 +33,12 @@ class FilterFactory:
             return ExtendedKalmanFilter(config)
         elif filter_type == "UKF":
             return UnscentedKalmanFilter(config)
-        elif filter_type == "FILTERPY_EKF":
-            return FilterPyExtendedKalmanFilter(config)
-        elif filter_type == "FILTERPY_UKF":
-            return FilterPyUnscentedKalmanFilter(config)
         elif filter_type == "FILTERPY_EKF_CORRECTED":
             return FilterPyExtendedKalmanFilterCorrected(config)
         elif filter_type == "FILTERPY_UKF_CORRECTED":
             return FilterPyUnscentedKalmanFilterCorrected(config)
         else:
-            raise ValueError(f"Unsupported filter type: {filter_type}. Use 'EKF', 'UKF', 'FilterPy_EKF', 'FilterPy_UKF', 'FilterPy_EKF_Corrected', or 'FilterPy_UKF_Corrected'")
+            raise ValueError(f"Unsupported filter type: {filter_type}. Use 'EKF', 'UKF', 'FilterPy_EKF_Corrected', or 'FilterPy_UKF_Corrected'")
 
     @staticmethod
     def get_default_config(filter_type="FilterPy_EKF_Corrected"):
@@ -99,18 +93,6 @@ class FilterFactory:
                 "ukf_alpha": 1.0,    # Spread parameter (ensures positive lambda)
                 "ukf_beta": 2.0,     # Distribution parameter
                 "ukf_kappa": 1.0,    # Secondary scaling parameter (3-n for 2D)
-            })
-        elif filter_type == "FILTERPY_EKF":
-            base_config["filter_type"] = "FilterPy_EKF"
-            # FilterPy EKF-specific parameters (none currently)
-            
-        elif filter_type == "FILTERPY_UKF":
-            base_config["filter_type"] = "FilterPy_UKF"
-            # FilterPy UKF-specific parameters
-            base_config.update({
-                "ukf_alpha": 0.1,    # FilterPy works well with smaller alpha
-                "ukf_beta": 2.0,     # Distribution parameter
-                "ukf_kappa": 0.0,    # Secondary scaling parameter
             })
         elif filter_type == "FILTERPY_EKF_CORRECTED":
             base_config["filter_type"] = "FilterPy_EKF_Corrected"
@@ -194,7 +176,7 @@ class FilterFactory:
     @staticmethod
     def get_supported_filters():
         """Get list of supported filter types."""
-        return ["EKF", "UKF", "FilterPy_EKF", "FilterPy_UKF", "FilterPy_EKF_Corrected", "FilterPy_UKF_Corrected"]
+        return ["EKF", "UKF", "FilterPy_EKF_Corrected", "FilterPy_UKF_Corrected"]
 
     @staticmethod
     def compare_filters():
@@ -227,36 +209,6 @@ class FilterFactory:
                     "Parameter tuning challenges"
                 ],
                 "best_for": "Research on UKF algorithms"
-            },
-            "FilterPy_EKF": {
-                "description": "FilterPy Extended Kalman Filter (RECOMMENDED)",
-                "advantages": [
-                    "Robust, well-tested implementation",
-                    "Excellent numerical stability",
-                    "Advanced features (innovation stats)",
-                    "Widely used in production",
-                    "Better error handling"
-                ],
-                "disadvantages": [
-                    "External dependency",
-                    "Less direct control"
-                ],
-                "best_for": "Production systems requiring reliable EKF performance"
-            },
-            "FilterPy_UKF": {
-                "description": "FilterPy Unscented Kalman Filter (RECOMMENDED)",
-                "advantages": [
-                    "Robust, well-tested implementation",
-                    "Excellent numerical stability",
-                    "No linearization required",
-                    "Advanced sigma point methods",
-                    "Better covariance handling"
-                ],
-                "disadvantages": [
-                    "External dependency",
-                    "Computationally more expensive"
-                ],
-                "best_for": "Production systems requiring robust nonlinear filtering"
             },
             "FilterPy_EKF_Corrected": {
                 "description": "Corrected FilterPy Extended Kalman Filter (BEST CHOICE)",

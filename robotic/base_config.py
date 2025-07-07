@@ -17,30 +17,30 @@ def get_base_config():
         # Arena parameters
         "arena_min": 0.0,
         "arena_max": 200.0,
-        "distance_tolerance": 5.0,
+        "distance_tolerance": 3.0,
         "periodic_boundaries": True,
         # Signal parameters
         "signal_decay": 0.05,
         "signal_max": 50.0,
         # Robot parameters
-        "robot_start_pos": [70.0, 70.0],
-        "robot_step_size": 0.3,
-        "actuator_noise": 0.5,
+        "robot_start_pos": [50.0, 50.0],
+        "robot_step_size": 0.1,  # Smaller steps reduce overshooting
+        "actuator_noise": 1.0,
         # Target parameters
-        "target_true_pos": [130.0, 130.0],
+        "target_true_pos": [120.0, 120.0],
         "target_motion_sigma": 0.5,
         # Filter initialization
         "initial_belief_mean": [100.0, 100.0],
         "initial_belief_variance": 10000.0,
         # Process noise parameters
-        "baseline_process_noise": 0.5,
+        "baseline_process_noise": 1.0,  # Higher process noise reduces oscillations
         "adaptive_process_noise": False,
-        "eps": 0.001,  # Epsilon parameter for adaptive process noise
+        "eps": 1.0,  # Epsilon parameter for adaptive process noise
         # Measurement noise parameters
         "adaptive_measurement_noise": False,
-        "alpha_R": 0.5,  # Adaptive measurement noise update rate
+        "alpha_R": 0.01,  # Lower learning rate for more stable estimates
         # Simulation parameters
-        "max_steps": 1000000,
+        "max_steps": 500000,
         "random_seed": 42,
     }
 
@@ -77,9 +77,9 @@ def get_signal_max_study_config():
     """
     return {
         "signal_decay": 0.05,  # Fixed for this study
-        "n_runs": 200,
-        "max_steps": 1000000,
-        "signal_max_values": [5, 10, 15, 20, 25, 30, 35, 40, 45, 50],  # Range to test
+        "n_runs": 400,
+        "max_steps": 1200000,
+        "signal_max_values": [5, 10, 15, 20, 25, 30, 35, 40],
     }
 
 

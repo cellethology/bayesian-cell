@@ -108,9 +108,9 @@ class BaseFilter(ABC):
         if self.is_adaptive:
             # Use configurable epsilon to avoid division by zero, and add bounds
             sigma_Q_current = self.sigma_Q / np.sqrt(self.eps + measurement)
-            # print(f"sigma_Q_current: {sigma_Q_current}")
+
             # Add bounds to prevent extreme values
-            sigma_Q_current = np.clip(sigma_Q_current, 0.001, 5.0)
+            sigma_Q_current = np.clip(sigma_Q_current, 0.01, 5.0)
         else:
             sigma_Q_current = self.sigma_Q
 

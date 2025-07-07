@@ -400,7 +400,7 @@ def create_all_plots(results_file="signal_max_comparison_results.csv", show_plot
     fig1 = create_mean_plot_with_sem(results, show_plot=show_plots)
 
     # Median plot with CI
-    fig2 = create_median_plot_with_ci(results, show_plot=show_plots)
+    # fig2 = create_median_plot_with_ci(results, show_plot=show_plots)
 
     # # Success rate plot
     # fig3 = create_success_rate_plot(results, show_plot=show_plots)
@@ -413,7 +413,7 @@ def create_all_plots(results_file="signal_max_comparison_results.csv", show_plot
     print("  - signal_max_median_comparison_plot.pdf (median plot with CI error bars)")
     print("  - signal_max_success_rates.png (success rate comparison)")
 
-    return fig1, fig2
+    return fig1
 
 
 def quick_plot(
@@ -449,7 +449,7 @@ if __name__ == "__main__":
     import sys
 
     # Check if results file was provided as argument
-    results_file = "signal_max_comparison_results.csv"
+    results_file = "output/signal_max_comparison_results.csv"
     if len(sys.argv) > 1:
         results_file = sys.argv[1]
 

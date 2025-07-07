@@ -17,45 +17,48 @@ def create_default_config():
         "arena_max": 200.0,
         "distance_tolerance": 5.0,
         # Signal parameters
-        "signal_max": 50.0,  # c0 - maximum signal strength
-        "signal_decay": 0.01,  # lambda - signal decay rate
+        "signal_max": 5.0,  # c0 - maximum signal strength
+        "signal_decay": 0.05,  # lambda - signal decay rate
         # Robot parameters
-        "robot_start_pos": [60.0, 60.0],
-        "robot_step_size": 0.3,
-        "actuator_noise": 0.5,  # sigma_u - robot actuator noise
+        "robot_start_pos": [75.0, 75.0],
+        "robot_step_size": 0.1,
+        "actuator_noise": 1.0,  # sigma_u - robot actuator noise
         # Target parameters
-        "target_true_pos": [140.0, 140.0],
-        "target_motion_sigma": 0.3,  # target random walk noise
+        "target_true_pos": [125.0, 125.0],
+        "target_motion_sigma": 0.5,  # target random walk noise
         # Filter parameters
-        "filter_type": "EKF",  # "EKF" or "UKF"
+        "filter_type": "FilterPy_EKF_Corrected",  # "EKF" or "UKF"
         "initial_belief_mean": [100.0, 100.0],  # broad prior mean
         "initial_belief_variance": 600.0,  # broad prior variance
-        "baseline_process_noise": 0.3,  # sigma_Q baseline
+        "baseline_process_noise": 1.0,  # sigma_Q baseline
         "adaptive_process_noise": True,  # enable/disable adaptive noise
-        "alpha_R": 0.1,  # innovation-based measurement noise update rate
+        "alpha_R": 0.001,  # innovation-based measurement noise update rate
         "adaptive_measurement_noise": False,  # enable/disable adaptive measurement noise
         # UKF-specific parameters (ignored if using EKF)
         "ukf_alpha": 0.001,  # UKF spread parameter
-        "ukf_beta": 2.0,     # UKF distribution parameter
-        "ukf_kappa": 0.0,    # UKF secondary scaling parameter
+        "ukf_beta": 2.0,  # UKF distribution parameter
+        "ukf_kappa": 0.0,  # UKF secondary scaling parameter
+        "eps": 1,
         # Simulation parameters
-        "max_steps": 100000,
-        "random_seed": 2,
+        "max_steps": 300000,
+        "random_seed": 12,
     }
 
 
 def create_ukf_config():
     """Create configuration optimized for UKF simulation."""
     config = create_default_config()
-    config.update({
-        "filter_type": "UKF",
-        # UKF works better with slightly different parameters
-        "ukf_alpha": 0.001,   # Small spread for stable performance
-        "ukf_beta": 2.0,      # Optimal for Gaussian distributions
-        "ukf_kappa": 0.0,     # Default secondary scaling
-        # You can adjust these for better UKF performance
-        "baseline_process_noise": 0.2,  # UKF often works well with lower process noise
-    })
+    config.update(
+        {
+            "filter_type": "UKF",
+            # UKF works better with slightly different parameters
+            "ukf_alpha": 0.001,  # Small spread for stable performance
+            "ukf_beta": 2.0,  # Optimal for Gaussian distributions
+            "ukf_kappa": 0.0,  # Default secondary scaling
+            # You can adjust these for better UKF performance
+            "baseline_process_noise": 0.2,  # UKF often works well with lower process noise
+        }
+    )
     return config
 
 
@@ -147,7 +150,7 @@ def main():
     config = create_default_config()
     config_name = "Default EKF"
 
-    # Option 2: UKF configuration  
+    # Option 2: UKF configuration
     # config = create_ukf_config()
     # config_name = "Default UKF"
 

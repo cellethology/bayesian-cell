@@ -9,44 +9,10 @@ from ekf_comparison import EKFComparison
 from base_config import get_base_config, get_method_configs, get_signal_max_study_config
 
 
-def bootstrap_median_ci(data, n_bootstrap=1000, confidence=0.95):
+def run_signal_max_comparison(inspect_trajectory=False):
     """
-    Calculate bootstrap confidence interval for median.
-
-    Args:
-        data: Array-like data
-        n_bootstrap: Number of bootstrap samples
-        confidence: Confidence level (0.95 for 95% CI)
-
-    Returns:
-        tuple: (median, ci_lower, ci_upper)
+    Run comparison of configurations across different signal_max values.
     """
-    if len(data) == 0:
-        return np.nan, np.nan, np.nan
-
-    data = np.array(data)
-    median_val = np.median(data)
-
-    # Bootstrap samples
-    bootstrap_medians = []
-    for _ in range(n_bootstrap):
-        bootstrap_sample = np.random.choice(data, size=len(data), replace=True)
-        bootstrap_medians.append(np.median(bootstrap_sample))
-
-    # Calculate confidence interval
-    alpha = 1 - confidence
-    ci_lower = np.percentile(bootstrap_medians, 100 * alpha / 2)
-    ci_upper = np.percentile(bootstrap_medians, 100 * (1 - alpha / 2))
-
-    return median_val, ci_lower, ci_upper
-
-
-def run_signal_max_comparison():
-    """
-    Run comparison of three EKF configurations across different signal_max values.
-    Fixed signal_decay = 0.05, varying signal_max from 5 to 50.
-    """
-    print("=== Signal Max Comparison Study ===")
 
     # Load configurations from base_config.py
     base_config = get_base_config()
@@ -69,8 +35,6 @@ def run_signal_max_comparison():
 
     print(f"Signal decay: {signal_decay}")
     print(f"Signal max values: {signal_max_values}")
-    print(f"Runs per configuration: {n_runs}")
-    print(f"Total simulations: {len(signal_max_values) * len(method_configs) * n_runs}")
 
     # Storage for all results
     all_results = []
@@ -93,51 +57,52 @@ def run_signal_max_comparison():
             comparison.add_config(method_name, method_config)
 
         # Run comparison
-        results = comparison.run_comparison(
-            n_runs=n_runs, max_steps=max_steps, verbose=False
-        )
+        if not inspect_trajectory:
+            results = comparison.run_comparison(
+                n_runs=n_runs, max_steps=max_steps, verbose=False
+            )
 
-        # Add signal_max column to results
-        results["signal_max"] = signal_max
-        results["method"] = results["config_name"]
+            # Add signal_max column to results
+            results["signal_max"] = signal_max
+            results["method"] = results["config_name"]
 
-        # Store results
-        all_results.append(results)
+            # Store results
+            all_results.append(results)
 
-        # Print quick summary for this signal_max value
-        print(f"\nSummary for signal_max = {signal_max:.1f}:")
-        for method in method_configs.keys():
-            method_data = results[results["method"] == method]
-            successful_data = method_data[method_data["target_reached"] == True]
+            combined_results = pd.concat(all_results, ignore_index=True)
 
-            if len(successful_data) > 0:
-                median_steps, ci_lower, ci_upper = bootstrap_median_ci(
-                    successful_data["steps_to_target"].values
-                )
-                success_rate = method_data["target_reached"].mean()
-                print(
-                    f"  {method}: {median_steps:.0f} steps (95% CI: [{ci_lower:.0f}, {ci_upper:.0f}]), {success_rate:.1%} success"
-                )
-            else:
-                print(f"  {method}: No successful runs")
+            # Perform paired t-test: Signal-aware EKF vs Standard EKF
+            print(f"\nPaired t-test for signal_max = {signal_max}:")
+            test_results = comparison.perform_paired_ttest(
+                results, "Signal-aware EKF", "Standard EKF"
+            )
 
-    combined_results = pd.concat(all_results, ignore_index=True)
+            # Print the results nicely
+            print(f"  Paired observations: {test_results['n_pairs']}")
+            print(f"  Mean difference: {test_results['mean_difference']:.1f}")
+            print(f"  t-statistic: {test_results['t_statistic']:.3f}")
+            print(f"  p-value: {test_results['p_value']:.6f}")
+            print(f"  Cohen's d: {test_results['cohens_d']:.3f}")
+
+        else:
+            print("Generating trajectory comparison for first two methods...")
+            method_names = list(method_configs.keys())
+            trajectory_data = comparison.run_trajectory_comparison(
+                method_names[0], method_names[1], n_runs=1, max_steps=max_steps, seed=48
+            )
+            comparison.plot_trajectory_comparison_separate(
+                trajectory_data,
+                run_index=0,
+                step_size=1,
+                save_path=f"output/trajectory_{method_names[0]}_vs_{method_names[1]}.png",
+            )
 
     # Save all results to CSV
-    results_filename = "signal_max_comparison_results.csv"
-    combined_results.to_csv(results_filename, index=False)
-    print(f"All results saved to {results_filename}")
-
-    return combined_results
+    if not inspect_trajectory:
+        results_filename = "output/signal_max_comparison_results.csv"
+        combined_results.to_csv(results_filename, index=False)
+        print(f"All results saved to {results_filename}")
 
 
 if __name__ == "__main__":
-    # Set random seed for reproducibility
-    np.random.seed(42)
-
-    # Run the complete comparison study
-    results = run_signal_max_comparison()
-
-    print(f"\n{'='*60}")
-    print("SIGNAL MAX COMPARISON COMPLETE")
-    print(f"{'='*60}")
+    run_signal_max_comparison(inspect_trajectory=False)

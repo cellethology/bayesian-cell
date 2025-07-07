@@ -17,17 +17,62 @@ from ekf_visualization import EKFVisualizer
 
 def run_single_ekf_simulation(args):
     """Run a single EKF simulation (for multiprocessing)."""
-    seed, config_name, config, max_steps, verbose = args
-
-    # Set seed for this run
-    np.random.seed(seed)
+    seed, config_name, config, max_steps, verbose, pre_generated_target = args
 
     # Remove random_seed from config to avoid conflicts
     config_copy = config.copy()
     config_copy.pop("random_seed", None)
 
-    # Create environment and run simulation
+    # Create environment
     env = EKFEnvironment(config_copy, verbose=verbose)
+
+    # Set up separate random states for fair comparison
+    target_rng = np.random.RandomState(seed)  # Same for all methods with same seed
+    robot_rng = np.random.RandomState(seed + 1000)  # Different for robot behavior
+
+    # Monkey patch target movement to use consistent random state
+    def move_target_consistent(self):
+        """Move target with consistent random state across methods."""
+        self.target_pos += target_rng.randn(2) * self.config["target_motion_sigma"]
+        self.target_pos = np.clip(
+            self.target_pos, self.config["arena_min"], self.config["arena_max"]
+        )
+        self.target_trajectory[self.trajectory_length] = self.target_pos
+
+    # Monkey patch robot movement to use separate random state
+    def move_robot_consistent(self):
+        """Move robot with separate random state."""
+        mu, _ = self.ekf.get_belief_state()
+        direction = mu - self.robot_pos
+        if np.linalg.norm(direction) > 1e-6:
+            self.robot_pos += (
+                self.config["robot_step_size"] * direction / np.linalg.norm(direction)
+            )
+        # Use robot-specific random state for actuator noise
+        self.robot_pos += robot_rng.randn(2) * self.config["actuator_noise"]
+        self.robot_pos = np.clip(
+            self.robot_pos, self.config["arena_min"], self.config["arena_max"]
+        )
+        self.robot_trajectory[self.trajectory_length] = self.robot_pos
+
+    # Monkey patch measurement to use robot random state
+    def get_signal_measurement_consistent(self, step):
+        """Generate measurement with robot random state."""
+        distance = np.sqrt(np.sum((self.target_pos - self.robot_pos) ** 2))
+        lambda_true = self.config["signal_max"] * np.exp(
+            -self.config["signal_decay"] * distance
+        )
+        measurement = robot_rng.poisson(lambda_true)
+        self.measurements[step] = measurement
+        return measurement
+
+    # Apply monkey patches
+    env.move_target = move_target_consistent.__get__(env, EKFEnvironment)
+    env.move_robot = move_robot_consistent.__get__(env, EKFEnvironment)
+    env.get_signal_measurement = get_signal_measurement_consistent.__get__(
+        env, EKFEnvironment
+    )
+
     results = env.run_simulation(max_steps)
 
     # Sigma statistics
@@ -122,13 +167,12 @@ class EKFComparison:
             f"Running EKF comparison of {len(self.configs)} configurations with {n_runs} runs each..."
         )
 
-        # Create all tasks
-        tasks = []
+        # Create all tasks - use same seed for target, different for robot
         seeds = list(range(n_runs))  # Same seeds for fair comparison
-
+        tasks = []
         for seed in seeds:
             for config_name, config in self.configs.items():
-                tasks.append((seed, config_name, config, max_steps, verbose))
+                tasks.append((seed, config_name, config, max_steps, verbose, None))
 
         # Run simulations in parallel
         if n_processes is None:
@@ -174,7 +218,7 @@ class EKFComparison:
                 q3_steps = successful_data["steps_to_target"].quantile(0.75)
 
                 # Bootstrap 95% confidence interval for median
-                n_bootstrap = 1000
+                n_bootstrap = 5000
                 bootstrap_medians = []
                 steps_values = successful_data["steps_to_target"].values
 
@@ -625,21 +669,56 @@ class EKFComparison:
         seeds = list(range(seed or 0, (seed or 0) + n_runs))
 
         for run_seed in seeds:
-            # Generate target trajectory that's consistent between configs
-            # We'll use the same random seed for both configs to ensure consistent targets
+            # Pre-generate target trajectory that's identical for both configs
+            np.random.seed(run_seed)
+
+            # Use first config to get parameters for target trajectory generation
+            base_config = self.configs[config1]
+            target_start = np.array(base_config["target_true_pos"])
+            target_motion_sigma = base_config["target_motion_sigma"]
+            arena_min = base_config["arena_min"]
+            arena_max = base_config["arena_max"]
+
+            # Pre-generate target trajectory up to max_steps
+            pre_generated_target = [target_start.copy()]
+            current_target = target_start.copy()
+            for step in range(max_steps):
+                current_target += np.random.randn(2) * target_motion_sigma
+                current_target = np.clip(current_target, arena_min, arena_max)
+                pre_generated_target.append(current_target.copy())
+
             seed_results = {}
 
             for config_name in [config1, config2]:
-                # Set seed and run simulation
                 np.random.seed(run_seed)
+
                 env = EKFEnvironment(self.configs[config_name], verbose=False)
+
+                env.target_pos = target_start.copy()
+                env._pre_generated_target = pre_generated_target
+                env._target_step = 0
+
+                def move_target_pregenerated(self):
+                    self._target_step += 1
+                    if self._target_step < len(self._pre_generated_target):
+                        self.target_pos = self._pre_generated_target[
+                            self._target_step
+                        ].copy()
+                    self.target_trajectory[self.trajectory_length] = self.target_pos
+
+                env.move_target = move_target_pregenerated.__get__(env, EKFEnvironment)
+
                 results = env.run_simulation(max_steps)
+
+                # Cut target trajectory to match robot trajectory length
+                robot_steps = results["steps_completed"]
+                cut_target_trajectory = pre_generated_target[: robot_steps + 1]
 
                 seed_results[config_name] = {
                     "results": results,
                     "seed": run_seed,
                     "robot_trajectory": results.get("robot_trajectory", []),
-                    "target_trajectory": results.get("target_trajectory", []),
+                    "target_trajectory": np.array(cut_target_trajectory),
                     "env": env,
                 }
 
@@ -780,13 +859,35 @@ class EKFComparison:
         ax2.set_xlabel("X Position")
         ax2.set_ylabel("Y Position")
 
-        # Add shared colorbar
-        fig.subplots_adjust(right=0.85)
-        cbar_ax = fig.add_axes([0.87, 0.15, 0.02, 0.7])
+        # Calculate proper layout: left_margin + 2*plot_width + gap + colorbar_width + right_margin = 1.0
+        # Reserve space: bottom 15% for legend, right 20% for colorbar and margin
+        left_margin = 0.08
+        bottom_margin = 0.15  # Space for legend
+        top_margin = 0.05
+        colorbar_width = 0.03
+        colorbar_gap = 0.02
+        right_margin = 0.02
+
+        plot_area_width = (
+            1.0 - left_margin - colorbar_gap - colorbar_width - right_margin
+        )
+        plot_height = 1.0 - bottom_margin - top_margin
+
+        # Adjust subplot positions manually
+        plt.subplots_adjust(
+            left=left_margin,
+            right=left_margin + plot_area_width,
+            bottom=bottom_margin,
+            top=1.0 - top_margin,
+        )
+
+        # Add colorbar in calculated position
+        cbar_left = left_margin + plot_area_width + colorbar_gap
+        cbar_ax = fig.add_axes([cbar_left, bottom_margin, colorbar_width, plot_height])
         cbar = plt.colorbar(im1, cax=cbar_ax)
         cbar.set_label("Signal Strength")
 
-        # Add legend
+        # Add legend at bottom with proper spacing
         from matplotlib.lines import Line2D
 
         legend_elements = [
@@ -802,12 +903,9 @@ class EKFComparison:
         fig.legend(
             handles=legend_elements,
             loc="lower center",
-            bbox_to_anchor=(0.5, 0.02),
+            bbox_to_anchor=(0.5, 0.01),
             ncol=4,
         )
-
-        plt.tight_layout()
-        plt.subplots_adjust(bottom=0.15)
 
         if save_path:
             fig.savefig(save_path, dpi=300, bbox_inches="tight")
