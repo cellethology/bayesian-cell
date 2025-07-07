@@ -1,5 +1,5 @@
 """
-Corrected FilterPy-based Unscented Kalman Filter implementation.
+FilterPy-based Unscented Kalman Filter implementation.
 Based on the official FilterPy examples from the GitHub notebooks.
 """
 
@@ -9,8 +9,8 @@ from filterpy.kalman import MerweScaledSigmaPoints
 from base_filter import BaseFilter
 
 
-class FilterPyUnscentedKalmanFilterCorrected(BaseFilter):
-    """Unscented Kalman Filter using FilterPy library - CORRECTED VERSION."""
+class FilterPyUnscentedKalmanFilter(BaseFilter):
+    """Unscented Kalman Filter using FilterPy library."""
 
     def __init__(self, config):
         """

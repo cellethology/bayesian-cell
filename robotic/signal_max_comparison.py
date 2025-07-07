@@ -5,7 +5,7 @@ Compares Standard EKF, Adaptive Process EKF, and Adaptive Measurement EKF across
 
 import numpy as np
 import pandas as pd
-from ekf_comparison import EKFComparison
+from comparison import EKFComparison
 from base_config import get_base_config, get_method_configs, get_signal_max_study_config
 
 

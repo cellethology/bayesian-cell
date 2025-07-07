@@ -1,16 +1,14 @@
 """
 Filter factory for creating EKF or UKF instances based on configuration.
-Provides unified interface for filter creation and validation.
+Provides unified interface for FilterPy-based filter creation and validation.
 """
 
-from ekf_filter import ExtendedKalmanFilter
-from ukf_filter import UnscentedKalmanFilter
-from filterpy_ekf_corrected import FilterPyExtendedKalmanFilterCorrected
-from filterpy_ukf_corrected import FilterPyUnscentedKalmanFilterCorrected
+from filterpy_ekf import FilterPyExtendedKalmanFilter
+from filterpy_ukf import FilterPyUnscentedKalmanFilter
 
 
 class FilterFactory:
-    """Factory class for creating tracking filters."""
+    """Factory class for creating FilterPy-based tracking filters."""
 
     @staticmethod
     def create_filter(config):
@@ -19,34 +17,30 @@ class FilterFactory:
 
         Args:
             config: Dictionary containing filter configuration
-                   Must include 'filter_type' key with value 'EKF', 'UKF', 'FilterPy_EKF', or 'FilterPy_UKF'
+                   Must include 'filter_type' key with value 'FilterPy_EKF' or 'FilterPy_UKF'
 
         Returns:
-            Filter instance (EKF or UKF)
+            Filter instance (FilterPy EKF or UKF)
 
         Raises:
             ValueError: If filter_type is not supported
         """
-        filter_type = config.get("filter_type", "FilterPy_EKF_Corrected").upper()
+        filter_type = config.get("filter_type", "FilterPy_EKF").upper()
 
-        if filter_type == "EKF":
-            return ExtendedKalmanFilter(config)
-        elif filter_type == "UKF":
-            return UnscentedKalmanFilter(config)
-        elif filter_type == "FILTERPY_EKF_CORRECTED":
-            return FilterPyExtendedKalmanFilterCorrected(config)
-        elif filter_type == "FILTERPY_UKF_CORRECTED":
-            return FilterPyUnscentedKalmanFilterCorrected(config)
+        if filter_type == "FILTERPY_EKF":
+            return FilterPyExtendedKalmanFilter(config)
+        elif filter_type == "FILTERPY_UKF":
+            return FilterPyUnscentedKalmanFilter(config)
         else:
-            raise ValueError(f"Unsupported filter type: {filter_type}. Use 'EKF', 'UKF', 'FilterPy_EKF_Corrected', or 'FilterPy_UKF_Corrected'")
+            raise ValueError(f"Unsupported filter type: {filter_type}. Use 'FilterPy_EKF' or 'FilterPy_UKF'")
 
     @staticmethod
-    def get_default_config(filter_type="FilterPy_EKF_Corrected"):
+    def get_default_config(filter_type="FilterPy_EKF"):
         """
         Get default configuration for specified filter type.
 
         Args:
-            filter_type: Type of filter ("EKF", "UKF", "FilterPy_EKF", or "FilterPy_UKF")
+            filter_type: Type of filter ("FilterPy_EKF" or "FilterPy_UKF")
 
         Returns:
             Dictionary with default configuration parameters
@@ -82,25 +76,12 @@ class FilterFactory:
 
         filter_type = filter_type.upper()
         
-        if filter_type == "EKF":
-            base_config["filter_type"] = "EKF"
-            # Custom EKF-specific parameters (none currently)
+        if filter_type == "FILTERPY_EKF":
+            base_config["filter_type"] = "FilterPy_EKF"
             
-        elif filter_type == "UKF":
-            base_config["filter_type"] = "UKF"
-            # Custom UKF-specific parameters
-            base_config.update({
-                "ukf_alpha": 1.0,    # Spread parameter (ensures positive lambda)
-                "ukf_beta": 2.0,     # Distribution parameter
-                "ukf_kappa": 1.0,    # Secondary scaling parameter (3-n for 2D)
-            })
-        elif filter_type == "FILTERPY_EKF_CORRECTED":
-            base_config["filter_type"] = "FilterPy_EKF_Corrected"
-            # Corrected FilterPy EKF-specific parameters (none currently)
-            
-        elif filter_type == "FILTERPY_UKF_CORRECTED":
-            base_config["filter_type"] = "FilterPy_UKF_Corrected"
-            # Corrected FilterPy UKF-specific parameters
+        elif filter_type == "FILTERPY_UKF":
+            base_config["filter_type"] = "FilterPy_UKF"
+            # FilterPy UKF-specific parameters
             base_config.update({
                 "ukf_alpha": 0.1,    # FilterPy works well with smaller alpha
                 "ukf_beta": 2.0,     # Distribution parameter
@@ -151,18 +132,18 @@ class FilterFactory:
         if config.get("eps", 1.0) <= 0:
             raise ValueError("eps must be positive (> 0)")
 
-        filter_type = config.get("filter_type", "EKF").upper()
+        filter_type = config.get("filter_type", "FilterPy_EKF").upper()
         
-        if filter_type not in ["EKF", "UKF"]:
-            raise ValueError(f"Invalid filter_type: {filter_type}. Must be 'EKF' or 'UKF'")
+        if filter_type not in ["FILTERPY_EKF", "FILTERPY_UKF"]:
+            raise ValueError(f"Invalid filter_type: {filter_type}. Must be 'FilterPy_EKF' or 'FilterPy_UKF'")
 
         # Validate UKF-specific parameters
-        if filter_type == "UKF":
+        if filter_type == "FILTERPY_UKF":
             ukf_keys = ["ukf_alpha", "ukf_beta", "ukf_kappa"]
             for key in ukf_keys:
                 if key not in config:
                     # Set default values if missing
-                    defaults = {"ukf_alpha": 0.001, "ukf_beta": 2.0, "ukf_kappa": 0.0}
+                    defaults = {"ukf_alpha": 0.1, "ukf_beta": 2.0, "ukf_kappa": 0.0}
                     config[key] = defaults[key]
 
             # Validate UKF parameter ranges
@@ -176,70 +157,40 @@ class FilterFactory:
     @staticmethod
     def get_supported_filters():
         """Get list of supported filter types."""
-        return ["EKF", "UKF", "FilterPy_EKF_Corrected", "FilterPy_UKF_Corrected"]
+        return ["FilterPy_EKF", "FilterPy_UKF"]
 
     @staticmethod
     def compare_filters():
         """Get comparison information between filter types."""
         return {
-            "EKF": {
-                "description": "Custom Extended Kalman Filter",
+            "FilterPy_EKF": {
+                "description": "FilterPy Extended Kalman Filter (RECOMMENDED)",
                 "advantages": [
-                    "Custom implementation",
-                    "Direct control over algorithm",
-                    "Good for learning/research"
-                ],
-                "disadvantages": [
-                    "Potential numerical issues",
-                    "Limited testing",
-                    "May have implementation bugs"
-                ],
-                "best_for": "Research and algorithm development"
-            },
-            "UKF": {
-                "description": "Custom Unscented Kalman Filter",
-                "advantages": [
-                    "Custom implementation",
-                    "No linearization required",
-                    "Direct control over sigma points"
-                ],
-                "disadvantages": [
-                    "Complex implementation",
-                    "Numerical stability issues",
-                    "Parameter tuning challenges"
-                ],
-                "best_for": "Research on UKF algorithms"
-            },
-            "FilterPy_EKF_Corrected": {
-                "description": "Corrected FilterPy Extended Kalman Filter (BEST CHOICE)",
-                "advantages": [
-                    "Correct FilterPy API usage patterns",
-                    "Based on official FilterPy notebooks",
                     "Robust, well-tested implementation",
                     "Excellent numerical stability",
                     "Advanced features (innovation stats)",
-                    "Validated against official examples"
+                    "Validated against official examples",
+                    "Active maintenance and community"
                 ],
                 "disadvantages": [
                     "External dependency"
                 ],
-                "best_for": "All EKF applications - replaces other EKF implementations"
+                "best_for": "Most EKF applications - production ready"
             },
-            "FilterPy_UKF_Corrected": {
-                "description": "Corrected FilterPy Unscented Kalman Filter (BEST CHOICE)",
+            "FilterPy_UKF": {
+                "description": "FilterPy Unscented Kalman Filter (RECOMMENDED)",
                 "advantages": [
-                    "Correct FilterPy API usage patterns",
-                    "Based on official FilterPy notebooks",
                     "Robust, well-tested implementation",
                     "Excellent numerical stability",
                     "No linearization required",
-                    "Advanced sigma point methods"
+                    "Advanced sigma point methods",
+                    "Better handling of nonlinear systems"
                 ],
                 "disadvantages": [
                     "External dependency",
                     "Computationally more expensive"
                 ],
-                "best_for": "All UKF applications - replaces other UKF implementations"
+                "best_for": "Highly nonlinear systems - production ready"
             }
         }
 
@@ -249,6 +200,6 @@ def create_filter(config):
     return FilterFactory.create_filter(config)
 
 
-def get_default_config(filter_type="EKF"):
+def get_default_config(filter_type="FilterPy_EKF"):
     """Convenience function for getting default configuration."""
     return FilterFactory.get_default_config(filter_type)

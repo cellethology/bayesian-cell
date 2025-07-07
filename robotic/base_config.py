@@ -13,7 +13,7 @@ def get_base_config():
     """
     return {
         # Filter configuration
-        "filter_type": "FilterPy_EKF_Corrected",
+        "filter_type": "FilterPy_EKF",
         # Arena parameters
         "arena_min": 0.0,
         "arena_max": 200.0,

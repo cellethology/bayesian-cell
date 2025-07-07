@@ -1,5 +1,5 @@
 """
-Corrected FilterPy-based Extended Kalman Filter implementation.
+FilterPy-based Extended Kalman Filter implementation.
 Based on the official FilterPy examples from the GitHub notebooks.
 """
 
@@ -8,8 +8,8 @@ from filterpy.kalman import ExtendedKalmanFilter
 from base_filter import BaseFilter
 
 
-class FilterPyExtendedKalmanFilterCorrected(BaseFilter):
-    """Extended Kalman Filter using FilterPy library - CORRECTED VERSION."""
+class FilterPyExtendedKalmanFilter(BaseFilter):
+    """Extended Kalman Filter using FilterPy library."""
 
     def __init__(self, config):
         """
