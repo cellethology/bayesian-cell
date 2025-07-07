@@ -3,6 +3,13 @@ Signal max comparison study for EKF configurations.
 Compares Standard EKF, Adaptive Process EKF, and Adaptive Measurement EKF across different signal_max values.
 """
 
+# Handle imports properly for both module and direct execution
+if __name__ == "__main__":
+    # When run directly, add parent directory to path
+    import sys
+    import os
+    sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 import numpy as np
 import pandas as pd
 from analysis.comparison import EKFComparison
