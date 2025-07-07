@@ -6,7 +6,7 @@ Based on the official FilterPy examples from the GitHub notebooks.
 import numpy as np
 from filterpy.kalman import UnscentedKalmanFilter
 from filterpy.kalman import MerweScaledSigmaPoints
-from base_filter import BaseFilter
+from .base_filter import BaseFilter
 
 
 class FilterPyUnscentedKalmanFilter(BaseFilter):

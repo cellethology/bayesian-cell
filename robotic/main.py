@@ -15,10 +15,8 @@ import time
 import numpy as np
 import matplotlib.pyplot as plt
 
-from environment import EKFEnvironment
-from visualization import EKFVisualizer
-from base_config import get_base_config
-from utils import (
+from core import EKFEnvironment, EKFVisualizer, get_base_config
+from shared import (
     ensure_output_directory, 
     print_config_summary, 
     generate_default_output_path,

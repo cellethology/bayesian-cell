@@ -5,8 +5,7 @@ Now supports both EKF and UKF through unified interface.
 """
 
 import numpy as np
-from filterpy_ekf import FilterPyExtendedKalmanFilter
-from filterpy_ukf import FilterPyUnscentedKalmanFilter
+from filters import FilterPyExtendedKalmanFilter, FilterPyUnscentedKalmanFilter
 
 
 class EKFEnvironment:

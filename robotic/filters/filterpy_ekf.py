@@ -5,7 +5,7 @@ Based on the official FilterPy examples from the GitHub notebooks.
 
 import numpy as np
 from filterpy.kalman import ExtendedKalmanFilter
-from base_filter import BaseFilter
+from .base_filter import BaseFilter
 
 
 class FilterPyExtendedKalmanFilter(BaseFilter):

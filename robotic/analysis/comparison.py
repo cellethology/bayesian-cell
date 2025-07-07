@@ -11,8 +11,7 @@ import pandas as pd
 from typing import Dict, Any, Optional
 import os
 from scipy import stats
-from environment import EKFEnvironment
-from visualization import EKFVisualizer
+from core import EKFEnvironment, EKFVisualizer
 
 
 def run_single_ekf_simulation(args):
