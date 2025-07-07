@@ -5,7 +5,8 @@ Now supports both EKF and UKF through unified interface.
 """
 
 import numpy as np
-from filter_factory import FilterFactory
+from filterpy_ekf import FilterPyExtendedKalmanFilter
+from filterpy_ukf import FilterPyUnscentedKalmanFilter
 
 
 class EKFEnvironment:
@@ -66,9 +67,17 @@ class EKFEnvironment:
         # Initialize filter (EKF or UKF based on config)
         # Set default filter type if not specified
         if "filter_type" not in self.config:
-            self.config["filter_type"] = "EKF"
+            self.config["filter_type"] = "FilterPy_EKF"
         
-        self.filter = FilterFactory.create_filter(self.config)
+        # Direct filter instantiation based on filter type
+        filter_type = self.config["filter_type"]
+        if filter_type == "FilterPy_EKF":
+            self.filter = FilterPyExtendedKalmanFilter(self.config)
+        elif filter_type == "FilterPy_UKF":
+            self.filter = FilterPyUnscentedKalmanFilter(self.config)
+        else:
+            raise ValueError(f"Unknown filter type: {filter_type}. Use 'FilterPy_EKF' or 'FilterPy_UKF'.")
+        
         # Keep backward compatibility
         self.ekf = self.filter
 
@@ -84,7 +93,7 @@ class EKFEnvironment:
         self.trajectory_length = 1  # Track current length
 
         if verbose:
-            filter_type = self.config.get("filter_type", "EKF")
+            filter_type = self.config.get("filter_type", "FilterPy_EKF")
             print(f"Tracking Environment initialized with {filter_type}:")
             print(f"  Robot start: {self.robot_pos}")
             print(f"  Target start: {self.target_pos}")
@@ -92,7 +101,7 @@ class EKFEnvironment:
             print(f"  Adaptive process noise: {self.config['adaptive_process_noise']}")
             
             # Show UKF-specific parameters if using UKF
-            if filter_type == "UKF":
+            if "UKF" in filter_type:
                 print(f"  UKF alpha: {self.config.get('ukf_alpha', 0.001)}")
                 print(f"  UKF beta: {self.config.get('ukf_beta', 2.0)}")
                 print(f"  UKF kappa: {self.config.get('ukf_kappa', 0.0)}")

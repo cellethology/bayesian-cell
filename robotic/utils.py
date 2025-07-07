@@ -305,3 +305,60 @@ def generate_default_output_path(base_name, extension="png", include_timestamp=T
         filename = f"{base_name}.{extension}"
     
     return os.path.join("output", filename)
+
+
+def validate_filter_config(config):
+    """
+    Validate filter configuration parameters.
+    
+    Args:
+        config: Configuration dictionary
+        
+    Raises:
+        ValueError: If configuration is invalid
+    """
+    # Check filter type
+    filter_type = config.get("filter_type")
+    if filter_type not in ["FilterPy_EKF", "FilterPy_UKF"]:
+        raise ValueError(f"Invalid filter_type: {filter_type}. Must be 'FilterPy_EKF' or 'FilterPy_UKF'")
+    
+    # Check required numeric parameters
+    required_numeric = [
+        "signal_max", "signal_decay", "baseline_process_noise",
+        "actuator_noise", "initial_belief_variance"
+    ]
+    
+    for param in required_numeric:
+        if param not in config:
+            raise ValueError(f"Missing required parameter: {param}")
+        if not isinstance(config[param], (int, float)) or config[param] <= 0:
+            raise ValueError(f"Parameter {param} must be a positive number")
+    
+    # Check required array parameters
+    required_arrays = ["initial_belief_mean", "robot_start_pos", "target_true_pos"]
+    for param in required_arrays:
+        if param not in config:
+            raise ValueError(f"Missing required parameter: {param}")
+        if not isinstance(config[param], (list, tuple)) or len(config[param]) != 2:
+            raise ValueError(f"Parameter {param} must be a 2-element array")
+    
+    # Check boolean parameters
+    boolean_params = ["adaptive_process_noise", "adaptive_measurement_noise"]
+    for param in boolean_params:
+        if param in config and not isinstance(config[param], bool):
+            raise ValueError(f"Parameter {param} must be boolean")
+    
+    # UKF-specific parameter validation
+    if filter_type == "FilterPy_UKF":
+        ukf_params = {"ukf_alpha": (0, 1), "ukf_beta": (0, None), "ukf_kappa": (None, None)}
+        for param, (min_val, max_val) in ukf_params.items():
+            if param in config:
+                val = config[param]
+                if not isinstance(val, (int, float)):
+                    raise ValueError(f"UKF parameter {param} must be numeric")
+                if min_val is not None and val <= min_val:
+                    raise ValueError(f"UKF parameter {param} must be > {min_val}")
+                if max_val is not None and val >= max_val:
+                    raise ValueError(f"UKF parameter {param} must be < {max_val}")
+    
+    return True

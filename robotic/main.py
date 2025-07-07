@@ -17,7 +17,6 @@ import matplotlib.pyplot as plt
 
 from environment import EKFEnvironment
 from visualization import EKFVisualizer
-from filter_factory import FilterFactory
 from base_config import get_base_config
 from utils import (
     ensure_output_directory, 
@@ -25,7 +24,8 @@ from utils import (
     generate_default_output_path,
     format_time_delta,
     load_config_from_file,
-    save_config_to_file
+    save_config_to_file,
+    validate_filter_config
 )
 
 
@@ -370,7 +370,7 @@ def main():
 
     # Validate configuration
     try:
-        FilterFactory.validate_config(config)
+        validate_filter_config(config)
     except Exception as e:
         print(f"Configuration validation error: {e}", file=sys.stderr)
         sys.exit(1)

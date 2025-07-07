@@ -67,7 +67,7 @@ def load_and_prepare_data(results_file="signal_max_comparison_results.csv"):
 
 def create_mean_plot_with_sem(
     results_df,
-    save_path="signal_max_comparison_plot.pdf",
+    save_path="output/signal_max_comparison_plot.pdf",
     figsize=(4.5, 4),
     show_plot=True,
 ):
@@ -176,7 +176,7 @@ def create_mean_plot_with_sem(
 
 def create_median_plot_with_ci(
     results_df,
-    save_path="signal_max_median_comparison_plot.pdf",
+    save_path="output/signal_max_median_comparison_plot.pdf",
     figsize=(4.5, 4),
     show_plot=True,
     confidence=0.95,
@@ -275,6 +275,7 @@ def create_median_plot_with_ci(
     # plt.yscale("log")  # Log scale for y-axis
     plt.legend(fontsize=11, frameon=False)
     plt.grid(True, alpha=0.3)
+    plt.yscale("log")
 
     # Remove top and right spines
     plt.gca().spines["top"].set_visible(False)
@@ -400,7 +401,7 @@ def create_all_plots(results_file="signal_max_comparison_results.csv", show_plot
     fig1 = create_mean_plot_with_sem(results, show_plot=show_plots)
 
     # Median plot with CI
-    # fig2 = create_median_plot_with_ci(results, show_plot=show_plots)
+    fig2 = create_median_plot_with_ci(results, show_plot=show_plots)
 
     # # Success rate plot
     # fig3 = create_success_rate_plot(results, show_plot=show_plots)
