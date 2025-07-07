@@ -333,40 +333,6 @@ class EKFVisualizer:
         plt.tight_layout()
         return fig
 
-    def save_plots(self, filename_prefix, format="png", dpi=300):
-        """
-        Save all plots to files.
-
-        Args:
-            filename_prefix: Prefix for filenames
-            format: File format ('png', 'pdf', 'svg')
-            dpi: Resolution for raster formats
-        """
-        # Main three-plot figure
-        fig_main = self.create_three_plot_figure()
-        fig_main.savefig(
-            f"{filename_prefix}_three_plots.{format}", dpi=dpi, bbox_inches="tight"
-        )
-
-        # Individual plots
-        fig_traj = self.plot_trajectory_only()
-        fig_traj.savefig(
-            f"{filename_prefix}_trajectories.{format}", dpi=dpi, bbox_inches="tight"
-        )
-
-        fig_sigma = self.plot_sigma_only()
-        fig_sigma.savefig(
-            f"{filename_prefix}_sigma_evolution.{format}", dpi=dpi, bbox_inches="tight"
-        )
-
-        fig_belief = self.plot_belief_only()
-        fig_belief.savefig(
-            f"{filename_prefix}_belief_state.{format}", dpi=dpi, bbox_inches="tight"
-        )
-
-        print(f"All plots saved with prefix '{filename_prefix}' in {format} format")
-
-        return fig_main, fig_traj, fig_sigma, fig_belief
 
 
 def visualize_ekf_results(results, plot_type="three_plots", figsize=None, show=True):

@@ -139,51 +139,6 @@ def format_time_delta(seconds):
         return f"{hours:.1f}h"
 
 
-def safe_divide(numerator, denominator, default=0.0):
-    """
-    Safely divide two numbers, returning default if denominator is zero.
-
-    Args:
-        numerator: Numerator value
-        denominator: Denominator value
-        default: Default value to return if denominator is zero
-
-    Returns:
-        float: Result of division or default value
-    """
-    if abs(denominator) < 1e-10:
-        return default
-    return numerator / denominator
-
-
-def clip_to_bounds(value, min_val, max_val):
-    """
-    Clip value to specified bounds.
-
-    Args:
-        value: Value to clip
-        min_val: Minimum allowed value
-        max_val: Maximum allowed value
-
-    Returns:
-        Clipped value
-    """
-    return np.clip(value, min_val, max_val)
-
-
-def calculate_distance(pos1, pos2):
-    """
-    Calculate Euclidean distance between two positions.
-
-    Args:
-        pos1: First position (array-like)
-        pos2: Second position (array-like)
-
-    Returns:
-        float: Euclidean distance
-    """
-    diff = np.array(pos1) - np.array(pos2)
-    return np.sqrt(np.sum(diff**2))
 
 
 def get_timestamp_string():

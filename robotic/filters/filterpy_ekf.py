@@ -124,28 +124,3 @@ class FilterPyExtendedKalmanFilter(BaseFilter):
         self.filterpy_ekf.R = np.array([[self.sigma_z**2]])
         self.filterpy_ekf.Q = np.eye(2) * (self.sigma_Q**2)
 
-    def get_filterpy_filter(self):
-        """Get the underlying FilterPy filter for advanced usage."""
-        return self.filterpy_ekf
-
-    def get_innovation_stats(self):
-        """Get innovation statistics from FilterPy filter."""
-        if hasattr(self.filterpy_ekf, "y") and hasattr(self.filterpy_ekf, "S"):
-            return {
-                "innovation": (
-                    self.filterpy_ekf.y.copy()
-                    if self.filterpy_ekf.y is not None
-                    else None
-                ),
-                "innovation_covariance": (
-                    self.filterpy_ekf.S.copy()
-                    if self.filterpy_ekf.S is not None
-                    else None
-                ),
-                "log_likelihood": (
-                    self.filterpy_ekf.log_likelihood
-                    if hasattr(self.filterpy_ekf, "log_likelihood")
-                    else None
-                ),
-            }
-        return None

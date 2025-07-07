@@ -81,25 +81,3 @@ def get_signal_max_study_config():
     }
 
 
-def get_custom_config(study_type="signal_max", **overrides):
-    """
-    Get a custom configuration by combining base config with study-specific config.
-
-    Args:
-        study_type: Type of study ("signal_max", or "custom")
-        **overrides: Additional parameters to override
-
-    Returns:
-        dict: Combined configuration
-    """
-    base_config = get_base_config()
-
-    if study_type == "signal_max":
-        study_config = get_signal_max_study_config()
-    else:
-        study_config = {}
-
-    # Merge configurations (overrides have highest priority)
-    final_config = {**base_config, **study_config, **overrides}
-
-    return final_config

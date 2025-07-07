@@ -170,7 +170,7 @@ class FilterComparison:
             raise ValueError("No configurations added. Use add_config() first.")
 
         print(
-            f"Running filter comparison of {len(self.configs)} configurations with {n_runs} runs each..."
+            f"Running comparison of {len(self.configs)} configurations with {n_runs} runs each..."
         )
 
         # Create all tasks - use same seed for target, different for robot

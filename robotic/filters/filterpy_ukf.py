@@ -140,34 +140,3 @@ class FilterPyUnscentedKalmanFilter(BaseFilter):
         self.filterpy_ukf.R = np.array([[self.sigma_z**2]])
         self.filterpy_ukf.Q = np.eye(2) * (self.sigma_Q**2)
 
-    def get_filterpy_filter(self):
-        """Get the underlying FilterPy filter for advanced usage."""
-        return self.filterpy_ukf
-
-    def get_sigma_points(self):
-        """Get current sigma points for visualization."""
-        # Generate sigma points using FilterPy's method
-        sigmas = self.sigma_points.sigma_points(self.mu, self.Sigma)
-        return sigmas
-
-    def get_ukf_parameters(self):
-        """Get UKF-specific parameters."""
-        # Calculate lambda manually since attribute name varies in FilterPy versions
-        lambda_param = self.alpha**2 * (2 + self.kappa) - 2
-        return {
-            "alpha": self.alpha,
-            "beta": self.beta,
-            "kappa": self.kappa,
-            "lambda": lambda_param,
-            "n_sigma_points": 2 * 2 + 1  # 2*n + 1 for 2D state
-        }
-
-    def get_innovation_stats(self):
-        """Get innovation statistics from FilterPy filter."""
-        if hasattr(self.filterpy_ukf, 'y') and hasattr(self.filterpy_ukf, 'S'):
-            return {
-                'innovation': self.filterpy_ukf.y.copy() if self.filterpy_ukf.y is not None else None,
-                'innovation_covariance': self.filterpy_ukf.S.copy() if self.filterpy_ukf.S is not None else None,
-                'log_likelihood': self.filterpy_ukf.log_likelihood if hasattr(self.filterpy_ukf, 'log_likelihood') else None
-            }
-        return None
