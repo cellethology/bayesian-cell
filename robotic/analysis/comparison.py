@@ -16,7 +16,7 @@ from core import EKFEnvironment, EKFVisualizer
 
 def run_single_ekf_simulation(args):
     """Run a single EKF simulation (for multiprocessing)."""
-    seed, config_name, config, max_steps, verbose, pre_generated_target = args
+    seed, config_name, config, max_steps, verbose, collect_trajectories = args
 
     # Remove random_seed from config to avoid conflicts
     config_copy = config.copy()
@@ -100,7 +100,17 @@ def run_single_ekf_simulation(args):
         "adaptive_measurement_noise": config.get("adaptive_measurement_noise", False),
     }
 
-    return performance_metrics
+    if collect_trajectories:
+        return {
+            "performance_metrics": performance_metrics,
+            "results": results,
+            "seed": seed,
+            "robot_trajectory": results["robot_trajectory"],
+            "target_trajectory": results["target_trajectory"],
+            "config": config_copy,  # Include config instead of env to avoid pickling issues
+        }
+    else:
+        return performance_metrics
 
 
 class EKFComparison:
@@ -146,6 +156,7 @@ class EKFComparison:
         max_steps: int = 1000000,
         verbose: bool = False,
         n_processes: Optional[int] = None,
+        collect_trajectories: bool = False,
     ) -> pd.DataFrame:
         """
         Run comparison across all configurations.
@@ -155,9 +166,10 @@ class EKFComparison:
             max_steps: Maximum steps per simulation
             verbose: Whether to show simulation progress
             n_processes: Number of processes (None = auto)
+            collect_trajectories: Whether to collect full trajectory data
 
         Returns:
-            DataFrame with all results
+            DataFrame with all results (or dict with trajectories if collect_trajectories=True)
         """
         if not self.configs:
             raise ValueError("No configurations added. Use add_config() first.")
@@ -171,7 +183,16 @@ class EKFComparison:
         tasks = []
         for seed in seeds:
             for config_name, config in self.configs.items():
-                tasks.append((seed, config_name, config, max_steps, verbose, None))
+                tasks.append(
+                    (
+                        seed,
+                        config_name,
+                        config,
+                        max_steps,
+                        verbose,
+                        collect_trajectories,
+                    )
+                )
 
         # Run simulations in parallel
         if n_processes is None:
@@ -186,13 +207,22 @@ class EKFComparison:
             ):
                 results.append(result)
 
-        # Convert to DataFrame
-        df = pd.DataFrame(results)
-
         print(f"\nComparison complete! {len(results)} simulations finished.")
-        self._print_summary_statistics(df)
 
-        return df
+        if collect_trajectories:
+            # Organize trajectory data by configuration for plotting
+            trajectories_data = {}
+            for result in results:
+                config_name = result["performance_metrics"]["config_name"]
+                if config_name not in trajectories_data:
+                    trajectories_data[config_name] = []
+                trajectories_data[config_name].append(result)
+            return trajectories_data
+        else:
+            # Convert to DataFrame as usual
+            df = pd.DataFrame(results)
+            self._print_summary_statistics(df)
+            return df
 
     def _print_summary_statistics(self, df: pd.DataFrame):
         """Print summary statistics for each configuration."""
@@ -673,6 +703,7 @@ class EKFComparison:
 
             # Use first config to get parameters for target trajectory generation
             base_config = self.configs[config1]
+            base_config["signal_max"] = 10.0
             target_start = np.array(base_config["target_true_pos"])
             target_motion_sigma = base_config["target_motion_sigma"]
             arena_min = base_config["arena_min"]
@@ -689,7 +720,7 @@ class EKFComparison:
             seed_results = {}
 
             for config_name in [config1, config2]:
-                np.random.seed(run_seed)
+                np.random.seed(run_seed + 1000)
 
                 env = EKFEnvironment(self.configs[config_name], verbose=False)
 
@@ -776,6 +807,7 @@ class EKFComparison:
         figsize: tuple = (12, 5),
         save_path: str = None,
         step_size: int = 20,
+        config_names: list = None,
     ):
         """
         Plot trajectory comparison with separate side-by-side plots for one pair,
@@ -791,7 +823,15 @@ class EKFComparison:
         Returns:
             matplotlib figure
         """
-        config_names = list(trajectories_data.keys())
+        if config_names is None:
+            config_names = list(trajectories_data.keys())
+        else:
+            # make sure trajectories_data has the same order as config_names
+            trajectories_data = {
+                config_name: trajectories_data[config_name]
+                for config_name in config_names
+            }
+
         if len(config_names) != 2:
             raise ValueError("Exactly two configurations required")
 
@@ -810,53 +850,63 @@ class EKFComparison:
         # Create side-by-side plots
         fig, (ax1, ax2) = plt.subplots(1, 2, figsize=figsize)
 
-        # Get signal field from environment (assumed to be same for both configs)
-        env1 = traj_data1["env"]
-        signal_field = self._compute_signal_field(env1)
-
-        # Plot signal field for both subplots
-        arena_min = env1.config["arena_min"]
-        arena_max = env1.config["arena_max"]
+        # Get signal field from environment or config (backward compatibility)
+        if "env" in traj_data1:
+            env1 = traj_data1["env"]
+            signal_field = self._compute_signal_field(env1)
+            arena_min = env1.config["arena_min"]
+            arena_max = env1.config["arena_max"]
+        else:
+            # Use config directly when env is not available
+            config1 = traj_data1["config"]
+            signal_field = self._compute_signal_field_from_config(config1)
+            arena_min = config1["arena_min"]
+            arena_max = config1["arena_max"]
         im1 = ax1.imshow(
             signal_field,
             extent=[arena_min, arena_max, arena_min, arena_max],
             origin="lower",
             cmap="Greens",
-            alpha=0.7,
+            alpha=0.9,
         )
         im2 = ax2.imshow(
             signal_field,
             extent=[arena_min, arena_max, arena_min, arena_max],
             origin="lower",
             cmap="Greens",
-            alpha=0.7,
+            alpha=0.9,
         )
 
         # Plot robot trajectories with time-based color intensity
+        env_or_config = env1 if "env" in traj_data1 else config1
         self._plot_trajectory_with_time_colors(
-            ax1, robot_trajectory1, "Robot", "blue", env1, step_size
+            ax1, robot_trajectory1, "Robot", "blue", env_or_config, step_size
         )
         self._plot_trajectory_with_time_colors(
-            ax2, robot_trajectory2, "Robot", "blue", env1, step_size
+            ax2, robot_trajectory2, "Robot", "blue", env_or_config, step_size
         )
 
         # Plot target trajectories with time-based color intensity
         self._plot_trajectory_with_time_colors(
-            ax1, target_trajectory1, "Target", "red", env1, step_size
+            ax1, target_trajectory1, "Target", "red", env_or_config, step_size
         )
         self._plot_trajectory_with_time_colors(
-            ax2, target_trajectory2, "Target", "red", env1, step_size
+            ax2, target_trajectory2, "Target", "red", env_or_config, step_size
         )
 
-        # Set titles
-        ax1.set_title(f"{config1}")
-        ax2.set_title(f"{config2}")
+        # Set titles with bigger fonts
+        # ax1.set_title(f"{config_names[0]}", fontsize=16, fontweight='bold')
+        # ax2.set_title(f"{config_names[1]}", fontsize=16, fontweight='bold')
 
-        # Set axis labels
-        ax1.set_xlabel("X Position")
-        ax1.set_ylabel("Y Position")
-        ax2.set_xlabel("X Position")
-        ax2.set_ylabel("Y Position")
+        # Set axis labels with bigger fonts
+        ax1.set_xlabel("X Position", fontsize=16)
+        ax1.set_ylabel("Y Position", fontsize=16)
+        ax2.set_xlabel("X Position", fontsize=16)
+        ax2.set_ylabel("Y Position", fontsize=16)
+
+        # Make tick labels bigger
+        ax1.tick_params(labelsize=14)
+        ax2.tick_params(labelsize=14)
 
         # Calculate proper layout: left_margin + 2*plot_width + gap + colorbar_width + right_margin = 1.0
         # Reserve space: bottom 15% for legend, right 20% for colorbar and margin
@@ -864,27 +914,29 @@ class EKFComparison:
         bottom_margin = 0.15  # Space for legend
         top_margin = 0.05
         colorbar_width = 0.03
-        colorbar_gap = 0.02
-        right_margin = 0.02
+        colorbar_gap = 0.01
+        right_margin = 0.03
 
         plot_area_width = (
             1.0 - left_margin - colorbar_gap - colorbar_width - right_margin
         )
         plot_height = 1.0 - bottom_margin - top_margin
 
-        # Adjust subplot positions manually
+        # Adjust subplot positions manually with reduced space between plots
         plt.subplots_adjust(
             left=left_margin,
             right=left_margin + plot_area_width,
             bottom=bottom_margin,
             top=1.0 - top_margin,
+            wspace=0.1,  # Reduce horizontal space between subplots
         )
 
         # Add colorbar in calculated position
         cbar_left = left_margin + plot_area_width + colorbar_gap
         cbar_ax = fig.add_axes([cbar_left, bottom_margin, colorbar_width, plot_height])
         cbar = plt.colorbar(im1, cax=cbar_ax)
-        cbar.set_label("Signal Strength")
+        cbar.set_label("Signal Strength", fontsize=16)
+        cbar.ax.tick_params(labelsize=14)
 
         # Add legend at bottom with proper spacing
         from matplotlib.lines import Line2D
@@ -902,8 +954,10 @@ class EKFComparison:
         fig.legend(
             handles=legend_elements,
             loc="lower center",
-            bbox_to_anchor=(0.5, 0.01),
+            bbox_to_anchor=(0.5, -0.1),
             ncol=4,
+            fontsize=17,
+            frameon=False,
         )
 
         if save_path:
@@ -1122,6 +1176,26 @@ class EKFComparison:
 
         return signal_field
 
+    def _compute_signal_field_from_config(self, config):
+        """Compute signal field for visualization using config dictionary."""
+        arena_min = config["arena_min"]
+        arena_max = config["arena_max"]
+        signal_max = config["signal_max"]
+        signal_decay = config["signal_decay"]
+        target_pos = config["target_true_pos"]
+
+        # Create coordinate grid
+        x = np.linspace(arena_min, arena_max, 100)
+        y = np.linspace(arena_min, arena_max, 100)
+        X, Y = np.meshgrid(x, y)
+
+        # Compute signal field directly (simple exponential)
+        target_pos = np.array(target_pos)
+        distances = np.sqrt((X - target_pos[0]) ** 2 + (Y - target_pos[1]) ** 2)
+        signal_field = signal_max * np.exp(-signal_decay * distances)
+
+        return signal_field
+
     def _plot_trajectory_with_time_colors(
         self, ax, trajectory, label, base_color, env=None, step_size=20
     ):
@@ -1151,12 +1225,16 @@ class EKFComparison:
         colors = plt.cm.get_cmap(cmap_name)(np.linspace(0.3, 1.0, n_points))
 
         # Check if we need to handle periodic boundaries
-        periodic = env is not None and env.config.get("periodic_boundaries", False)
-
-        if periodic:
-            arena_min = env.config["arena_min"]
-            arena_max = env.config["arena_max"]
-            arena_size = arena_max - arena_min
+        if env is not None:
+            # env can be either an environment object or a config dict
+            config = env.config if hasattr(env, "config") else env
+            periodic = config.get("periodic_boundaries", False)
+            if periodic:
+                arena_min = config["arena_min"]
+                arena_max = config["arena_max"]
+                arena_size = arena_max - arena_min
+        else:
+            periodic = False
 
         # Plot trajectory segments
         for i in range(len(trajectory) - 1):

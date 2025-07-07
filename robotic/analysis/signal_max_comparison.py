@@ -8,6 +8,7 @@ if __name__ == "__main__":
     # When run directly, add parent directory to path
     import sys
     import os
+
     sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import numpy as np
@@ -92,16 +93,17 @@ def run_signal_max_comparison(inspect_trajectory=False):
             print(f"  Cohen's d: {test_results['cohens_d']:.3f}")
 
         else:
-            print("Generating trajectory comparison for first two methods...")
+            print("Generating trajectory comparison...")
             method_names = list(method_configs.keys())
-            trajectory_data = comparison.run_trajectory_comparison(
-                method_names[0], method_names[1], n_runs=1, max_steps=max_steps, seed=48
+            trajectory_data = comparison.run_comparison(
+                n_runs=1, max_steps=max_steps, collect_trajectories=True
             )
             comparison.plot_trajectory_comparison_separate(
                 trajectory_data,
                 run_index=0,
                 step_size=1,
-                save_path=f"output/trajectory_{method_names[0]}_vs_{method_names[1]}.png",
+                save_path=f"output/trajectory_comparison.pdf",
+                config_names=method_names,
             )
 
     # Save all results to CSV
