@@ -1146,7 +1146,7 @@ class EKFComparison:
         y = np.linspace(arena_min, arena_max, 100)
         X, Y = np.meshgrid(x, y)
 
-        # Compute signal field using the environment's method which handles periodic boundaries
+        # Compute signal field using the environment's method
         _, _, signal_field = env.compute_signal_field(target_pos)
 
         # Ensure signal field has the right size for visualization
@@ -1199,7 +1199,7 @@ class EKFComparison:
     def _plot_trajectory_with_time_colors(
         self, ax, trajectory, label, base_color, env=None, step_size=20
     ):
-        """Plot trajectory with time-based color intensity, handling periodic boundaries."""
+        """Plot trajectory with time-based color intensity."""
         if len(trajectory) < 2:
             return
 
@@ -1224,29 +1224,14 @@ class EKFComparison:
         cmap_name = color_map.get(base_color, "viridis")
         colors = plt.cm.get_cmap(cmap_name)(np.linspace(0.3, 1.0, n_points))
 
-        # Check if we need to handle periodic boundaries
-        if env is not None:
-            # env can be either an environment object or a config dict
-            config = env.config if hasattr(env, "config") else env
-            periodic = config.get("periodic_boundaries", False)
-            if periodic:
-                arena_min = config["arena_min"]
-                arena_max = config["arena_max"]
-                arena_size = arena_max - arena_min
-        else:
-            periodic = False
+        # No periodic boundaries handling needed
+        periodic = False
 
         # Plot trajectory segments
         for i in range(len(trajectory) - 1):
             current_pos = trajectory[i]
             next_pos = trajectory[i + 1]
 
-            # Check for wrapping discontinuities in periodic boundaries
-            if periodic and self._is_wrapping_discontinuity(
-                current_pos, next_pos, arena_size
-            ):
-                # Don't draw line across the discontinuity
-                continue
 
             ax.plot(
                 [current_pos[0], next_pos[0]],
@@ -1274,11 +1259,6 @@ class EKFComparison:
             label=f"{label} End",
         )
 
-    def _is_wrapping_discontinuity(self, pos1, pos2, arena_size):
-        """Check if there's a wrapping discontinuity between two positions."""
-        diff = np.abs(pos2 - pos1)
-        # If any dimension has a jump larger than half the arena size, it's likely a wrap
-        return np.any(diff > arena_size * 0.4)
 
 
 def quick_ekf_compare(

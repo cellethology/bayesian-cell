@@ -18,7 +18,6 @@ def get_base_config():
         "arena_min": 0.0,
         "arena_max": 200.0,
         "distance_tolerance": 3.0,
-        "periodic_boundaries": False,
         # Signal parameters
         "signal_decay": 0.05,
         "signal_max": 50.0,
