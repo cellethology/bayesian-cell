@@ -10,7 +10,7 @@ from filters import FilterPyExtendedKalmanFilter, FilterPyUnscentedKalmanFilter
 
 class EKFEnvironment:
     """Main tracking environment that coordinates target tracking simulation.
-    
+
     Supports both Extended Kalman Filter (EKF) and Unscented Kalman Filter (UKF)
     through unified interface.
     """
@@ -67,7 +67,7 @@ class EKFEnvironment:
         # Set default filter type if not specified
         if "filter_type" not in self.config:
             self.config["filter_type"] = "FilterPy_EKF"
-        
+
         # Direct filter instantiation based on filter type
         filter_type = self.config["filter_type"]
         if filter_type == "FilterPy_EKF":
@@ -75,8 +75,10 @@ class EKFEnvironment:
         elif filter_type == "FilterPy_UKF":
             self.filter = FilterPyUnscentedKalmanFilter(self.config)
         else:
-            raise ValueError(f"Unknown filter type: {filter_type}. Use 'FilterPy_EKF' or 'FilterPy_UKF'.")
-        
+            raise ValueError(
+                f"Unknown filter type: {filter_type}. Use 'FilterPy_EKF' or 'FilterPy_UKF'."
+            )
+
         # Keep backward compatibility
         self.ekf = self.filter
 
@@ -96,11 +98,9 @@ class EKFEnvironment:
             print(f"Tracking Environment initialized with {filter_type}:")
             print(f"  Robot start: {self.robot_pos}")
             print(f"  Target start: {self.target_pos}")
-            print(f"  Filter type: {filter_type}")
-            print(f"  Adaptive process noise: {self.config['adaptive_process_noise']}")
-            
+
             # Show UKF-specific parameters if using UKF
-            if "UKF" in filter_type:
+            if "FilterPy_UKF" in filter_type:
                 print(f"  UKF alpha: {self.config.get('ukf_alpha', 0.001)}")
                 print(f"  UKF beta: {self.config.get('ukf_beta', 2.0)}")
                 print(f"  UKF kappa: {self.config.get('ukf_kappa', 0.0)}")
