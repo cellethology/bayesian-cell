@@ -39,7 +39,6 @@ def get_base_config():
         "alpha_R": 0.01,  # Lower learning rate for more stable estimates
         # Simulation parameters
         "max_steps": 500000,
-        "random_seed": 42,
     }
 
 
@@ -79,5 +78,3 @@ def get_signal_max_study_config():
         "max_steps": 1200000,
         "signal_max_values": [5, 10, 15, 20, 25, 30, 35, 40],
     }
-
-
