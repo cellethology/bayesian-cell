@@ -22,55 +22,12 @@ def run_single_ekf_simulation(args):
     config_copy = config.copy()
     config_copy.pop("random_seed", None)
 
-    # Create environment
-    env = EKFEnvironment(config_copy, verbose=verbose)
-
     # Set up separate random states for fair comparison
-    target_rng = np.random.RandomState(seed)  # Same for all methods with same seed
-    robot_rng = np.random.RandomState(seed + 1000)  # Different for robot behavior
+    target_rng = np.random.default_rng(seed)  # Same for all methods with same seed
+    robot_rng = np.random.default_rng(seed + 1000)  # Different for robot behavior
 
-    # Monkey patch target movement to use consistent random state
-    def move_target_consistent(self):
-        """Move target with consistent random state across methods."""
-        self.target_pos += target_rng.randn(2) * self.config["target_motion_sigma"]
-        self.target_pos = np.clip(
-            self.target_pos, self.config["arena_min"], self.config["arena_max"]
-        )
-        self.target_trajectory[self.trajectory_length] = self.target_pos
-
-    # Monkey patch robot movement to use separate random state
-    def move_robot_consistent(self):
-        """Move robot with separate random state."""
-        mu, _ = self.ekf.get_belief_state()
-        direction = mu - self.robot_pos
-        if np.linalg.norm(direction) > 1e-6:
-            self.robot_pos += (
-                self.config["robot_step_size"] * direction / np.linalg.norm(direction)
-            )
-        # Use robot-specific random state for actuator noise
-        self.robot_pos += robot_rng.randn(2) * self.config["actuator_noise"]
-        self.robot_pos = np.clip(
-            self.robot_pos, self.config["arena_min"], self.config["arena_max"]
-        )
-        self.robot_trajectory[self.trajectory_length] = self.robot_pos
-
-    # Monkey patch measurement to use robot random state
-    def get_signal_measurement_consistent(self, step):
-        """Generate measurement with robot random state."""
-        distance = np.sqrt(np.sum((self.target_pos - self.robot_pos) ** 2))
-        lambda_true = self.config["signal_max"] * np.exp(
-            -self.config["signal_decay"] * distance
-        )
-        measurement = robot_rng.poisson(lambda_true)
-        self.measurements[step] = measurement
-        return measurement
-
-    # Apply monkey patches
-    env.move_target = move_target_consistent.__get__(env, EKFEnvironment)
-    env.move_robot = move_robot_consistent.__get__(env, EKFEnvironment)
-    env.get_signal_measurement = get_signal_measurement_consistent.__get__(
-        env, EKFEnvironment
-    )
+    # Create environment with consistent random states
+    env = EKFEnvironment(config_copy, verbose=verbose, target_rng=target_rng, robot_rng=robot_rng)
 
     results = env.run_simulation(max_steps)
 

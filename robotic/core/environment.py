@@ -15,13 +15,15 @@ class EKFEnvironment:
     through unified interface.
     """
 
-    def __init__(self, config=None, verbose=False):
+    def __init__(self, config=None, verbose=False, target_rng=None, robot_rng=None):
         """
         Initialize EKF environment with configuration.
 
         Args:
             config: Configuration dictionary with simulation parameters
             verbose: Whether to print debug information
+            target_rng: Optional random state for target movement (defaults to np.random)
+            robot_rng: Optional random state for robot movement and measurements (defaults to np.random)
         """
         # Set up configuration with defaults
         self.config = {
@@ -55,6 +57,10 @@ class EKFEnvironment:
             self.config.update(config)
 
         self.verbose = verbose
+        
+        # Store random number generators for consistent randomness
+        self.target_rng = target_rng if target_rng is not None else np.random.default_rng()
+        self.robot_rng = robot_rng if robot_rng is not None else np.random.default_rng()
 
         # Don't set random seed here - let comparison script control it
         # Only set seed if explicitly requested for single simulations
@@ -123,7 +129,7 @@ class EKFEnvironment:
         )
 
         # Poisson noise
-        measurement = np.random.poisson(lambda_true)
+        measurement = self.robot_rng.poisson(lambda_true)
         self.measurements[step] = measurement
 
         return measurement
@@ -149,7 +155,7 @@ class EKFEnvironment:
             )
 
         # Add actuator noise
-        self.robot_pos += np.random.randn(2) * self.config["actuator_noise"]
+        self.robot_pos += self.robot_rng.normal(0, self.config["actuator_noise"], 2)
 
         # Apply boundary conditions (clip to arena)
         self.robot_pos = self._clip_position(self.robot_pos)
@@ -159,7 +165,7 @@ class EKFEnvironment:
 
     def move_target(self):
         """Move target with random walk."""
-        self.target_pos += np.random.randn(2) * self.config["target_motion_sigma"]
+        self.target_pos += self.target_rng.normal(0, self.config["target_motion_sigma"], 2)
 
         # Apply boundary conditions (clip to arena)
         self.target_pos = self._clip_position(self.target_pos)
