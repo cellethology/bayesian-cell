@@ -1,5 +1,5 @@
 """
-FilterPy-based Extended Kalman Filter implementation.
+Extended Kalman Filter implementation.
 Based on the official FilterPy examples from the GitHub notebooks.
 """
 
@@ -20,25 +20,25 @@ class FilterPyExtendedKalmanFilter(BaseFilter):
         """
         super().__init__(config)
 
-        # Initialize FilterPy EKF - correct way
-        self.filterpy_ekf = ExtendedKalmanFilter(dim_x=2, dim_z=1)
+        # Initialize EKF
+        self.ekf = ExtendedKalmanFilter(dim_x=2, dim_z=1)
 
         # Set initial state and covariance
-        self.filterpy_ekf.x = self.mu.copy()
-        self.filterpy_ekf.P = self.Sigma.copy()
+        self.ekf.x = self.mu.copy()
+        self.ekf.P = self.Sigma.copy()
 
         # Set initial measurement noise
-        self.filterpy_ekf.R = np.array([[self.sigma_z**2]])
+        self.ekf.R = np.array([[self.sigma_z**2]])
 
         # Process model is identity for stationary target
-        self.filterpy_ekf.F = np.eye(2)
+        self.ekf.F = np.eye(2)
 
         # We'll set Q dynamically in predict_and_update
-        self.filterpy_ekf.Q = np.eye(2) * (self.sigma_Q**2)
+        self.ekf.Q = np.eye(2) * (self.sigma_Q**2)
 
     def _hx(self, x):
         """
-        Measurement function for FilterPy EKF.
+        Measurement function for EKF.
 
         Args:
             x: State vector [x, y]
@@ -51,7 +51,7 @@ class FilterPyExtendedKalmanFilter(BaseFilter):
 
     def _HJacobian(self, x):
         """
-        Jacobian of measurement function for FilterPy EKF.
+        Jacobian of measurement function for EKF.
 
         Args:
             x: State vector [x, y]
@@ -90,22 +90,22 @@ class FilterPyExtendedKalmanFilter(BaseFilter):
         self.R_est_history.append(self.R_est)
 
         # 2. Update FilterPy filter parameters
-        self.filterpy_ekf.Q = Q
+        self.ekf.Q = Q
 
         # Set measurement noise (add small numerical stability term)
         R_current = self.R_est if self.adaptive_measurement_noise else self.sigma_z**2
-        self.filterpy_ekf.R = np.array([[R_current + 1e-12]])
+        self.ekf.R = np.array([[R_current + 1e-12]])
 
         # 3. Prediction step (FilterPy handles this)
-        self.filterpy_ekf.predict()
+        self.ekf.predict()
 
-        # 4. Update step - CORRECT FilterPy usage
+        # 4. Update step
         z = np.array([measurement])
-        self.filterpy_ekf.update(z, self._HJacobian, self._hx)
+        self.ekf.update(z, self._HJacobian, self._hx)
 
         # 5. Extract results
-        self.mu = self.filterpy_ekf.x.copy()
-        self.Sigma = self.filterpy_ekf.P.copy()
+        self.mu = self.ekf.x.copy()
+        self.Sigma = self.ekf.P.copy()
 
         # 6. Adaptive measurement noise update
         innovation = measurement - self._h(self.mu, robot_pos)
@@ -119,8 +119,7 @@ class FilterPyExtendedKalmanFilter(BaseFilter):
         super().reset(initial_mean, initial_covariance)
 
         # Update FilterPy filter
-        self.filterpy_ekf.x = self.mu.copy()
-        self.filterpy_ekf.P = self.Sigma.copy()
-        self.filterpy_ekf.R = np.array([[self.sigma_z**2]])
-        self.filterpy_ekf.Q = np.eye(2) * (self.sigma_Q**2)
-
+        self.ekf.x = self.mu.copy()
+        self.ekf.P = self.Sigma.copy()
+        self.ekf.R = np.array([[self.sigma_z**2]])
+        self.ekf.Q = np.eye(2) * (self.sigma_Q**2)

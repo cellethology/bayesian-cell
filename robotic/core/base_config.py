@@ -38,7 +38,6 @@ def get_base_config():
         "adaptive_measurement_noise": False,
         "alpha_R": 0.01,  # Lower learning rate for more stable estimates
         # Simulation parameters
-        "max_steps": 500000,
     }
 
 
