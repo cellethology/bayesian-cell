@@ -30,14 +30,12 @@ def run_signal_max_comparison(inspect_trajectory=False):
     # Extract study parameters
     signal_decay = study_config["signal_decay"]
     n_runs = study_config["n_runs"]
-    max_steps = study_config["max_steps"]
     signal_max_values = np.array(study_config["signal_max_values"])
 
     # Update base config with study-specific parameters
     base_config.update(
         {
             "signal_decay": signal_decay,
-            "max_steps": max_steps,
         }
     )
 
@@ -66,9 +64,7 @@ def run_signal_max_comparison(inspect_trajectory=False):
 
         # Run comparison
         if not inspect_trajectory:
-            results = comparison.run_comparison(
-                n_runs=n_runs, max_steps=max_steps, verbose=False
-            )
+            results = comparison.run_comparison(n_runs=n_runs, verbose=False)
 
             # Add signal_max column to results
             results["signal_max"] = signal_max
@@ -94,7 +90,7 @@ def run_signal_max_comparison(inspect_trajectory=False):
             print("Generating trajectory comparison...")
             method_names = list(method_configs.keys())
             trajectory_data = comparison.run_comparison(
-                n_runs=1, max_steps=max_steps, collect_trajectories=True
+                n_runs=1, collect_trajectories=True
             )
             comparison.plot_trajectory_comparison_separate(
                 trajectory_data,

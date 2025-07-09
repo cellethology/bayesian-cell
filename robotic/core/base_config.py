@@ -38,6 +38,7 @@ def get_base_config():
         "adaptive_measurement_noise": False,
         "alpha_R": 0.01,  # Lower learning rate for more stable estimates
         # Simulation parameters
+        "max_steps": 1200000,
     }
 
 
@@ -74,6 +75,5 @@ def get_signal_max_study_config():
     return {
         "signal_decay": 0.05,  # Fixed for this study
         "n_runs": 400,
-        "max_steps": 1200000,
         "signal_max_values": [5, 10, 15, 20, 25, 30, 35, 40],
     }

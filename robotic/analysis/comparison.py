@@ -16,7 +16,7 @@ from core import EKFEnvironment, EKFVisualizer
 
 def run_single_ekf_simulation(args):
     """Run a single EKF simulation (for multiprocessing)."""
-    seed, config_name, config, max_steps, verbose, collect_trajectories = args
+    seed, config_name, config, verbose, collect_trajectories = args
 
     # Remove random_seed from config to avoid conflicts
     config_copy = config.copy()
@@ -27,9 +27,11 @@ def run_single_ekf_simulation(args):
     robot_rng = np.random.default_rng(seed + 1000)  # Different for robot behavior
 
     # Create environment with consistent random states
-    env = EKFEnvironment(config_copy, verbose=verbose, target_rng=target_rng, robot_rng=robot_rng)
+    env = EKFEnvironment(
+        config_copy, verbose=verbose, target_rng=target_rng, robot_rng=robot_rng
+    )
 
-    results = env.run_simulation(max_steps)
+    results = env.run_simulation()
 
     # Sigma statistics
     sigma_mean = (
@@ -105,7 +107,6 @@ class FilterComparison:
     def run_comparison(
         self,
         n_runs: int = 20,
-        max_steps: int = 1000000,
         verbose: bool = False,
         n_processes: Optional[int] = None,
         collect_trajectories: bool = False,
@@ -115,7 +116,6 @@ class FilterComparison:
 
         Args:
             n_runs: Number of runs per configuration
-            max_steps: Maximum steps per simulation
             verbose: Whether to show simulation progress
             n_processes: Number of processes (None = auto)
             collect_trajectories: Whether to collect full trajectory data
@@ -140,7 +140,6 @@ class FilterComparison:
                         seed,
                         config_name,
                         config,
-                        max_steps,
                         verbose,
                         collect_trajectories,
                     )

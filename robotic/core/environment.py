@@ -188,40 +188,14 @@ class EKFEnvironment:
         distance = self._distance(self.robot_pos, self.target_pos)
         return distance < self.config["distance_tolerance"]
 
-    def run_simulation(self, max_steps=None):
+    def run_simulation(self):
         """
         Run complete EKF simulation.
-
-        Args:
-            max_steps: Maximum number of simulation steps (overrides config)
 
         Returns:
             dict: Simulation results including trajectories and final state
         """
-        if max_steps is None:
-            max_steps = self.config["max_steps"]
-
-        # Ensure we have enough pre-allocated space
-        if max_steps > len(self.measurements):
-            # Reallocate arrays if needed
-            new_size = max_steps + 1
-            old_robot_traj = self.robot_trajectory[: self.trajectory_length]
-            old_target_traj = self.target_trajectory[: self.trajectory_length]
-            old_measurements = (
-                self.measurements[: self.trajectory_length - 1]
-                if self.trajectory_length > 1
-                else []
-            )
-
-            self.robot_trajectory = np.zeros((new_size, 2))
-            self.target_trajectory = np.zeros((new_size, 2))
-            self.measurements = np.zeros(max_steps)
-
-            # Copy existing data
-            self.robot_trajectory[: len(old_robot_traj)] = old_robot_traj
-            self.target_trajectory[: len(old_target_traj)] = old_target_traj
-            if len(old_measurements) > 0:
-                self.measurements[: len(old_measurements)] = old_measurements
+        max_steps = self.config["max_steps"]
 
         if self.verbose:
             print(f"Starting EKF simulation for up to {max_steps} steps...")
