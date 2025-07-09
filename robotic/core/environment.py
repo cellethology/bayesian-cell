@@ -57,10 +57,18 @@ class EKFEnvironment:
             self.config.update(config)
 
         self.verbose = verbose
-        
+
         # Store random number generators for consistent randomness
-        self.target_rng = target_rng if target_rng is not None else np.random.default_rng()
-        self.robot_rng = robot_rng if robot_rng is not None else np.random.default_rng()
+        self.target_rng = (
+            target_rng
+            if target_rng is not None
+            else np.random.default_rng(seed=self.config["random_seed"])
+        )
+        self.robot_rng = (
+            robot_rng
+            if robot_rng is not None
+            else np.random.default_rng(seed=self.config["random_seed"])
+        )
 
         # Don't set random seed here - let comparison script control it
         # Only set seed if explicitly requested for single simulations
@@ -72,17 +80,17 @@ class EKFEnvironment:
         # Initialize filter (EKF or UKF based on config)
         # Set default filter type if not specified
         if "filter_type" not in self.config:
-            self.config["filter_type"] = "FilterPy_EKF"
+            self.config["filter_type"] = "EKF"
 
         # Direct filter instantiation based on filter type
         filter_type = self.config["filter_type"]
-        if filter_type == "FilterPy_EKF":
+        if filter_type == "EKF":
             self.filter = FilterPyExtendedKalmanFilter(self.config)
-        elif filter_type == "FilterPy_UKF":
+        elif filter_type == "UKF":
             self.filter = FilterPyUnscentedKalmanFilter(self.config)
         else:
             raise ValueError(
-                f"Unknown filter type: {filter_type}. Use 'FilterPy_EKF' or 'FilterPy_UKF'."
+                f"Unknown filter type: {filter_type}. Use 'EKF' or 'UKF'."
             )
 
         # Keep backward compatibility
@@ -100,13 +108,13 @@ class EKFEnvironment:
         self.trajectory_length = 1  # Track current length
 
         if verbose:
-            filter_type = self.config.get("filter_type", "FilterPy_EKF")
+            filter_type = self.config.get("filter_type", "EKF")
             print(f"Tracking Environment initialized with {filter_type}:")
             print(f"  Robot start: {self.robot_pos}")
             print(f"  Target start: {self.target_pos}")
 
             # Show UKF-specific parameters if using UKF
-            if "FilterPy_UKF" in filter_type:
+            if "UKF" in filter_type:
                 print(f"  UKF alpha: {self.config.get('ukf_alpha', 0.001)}")
                 print(f"  UKF beta: {self.config.get('ukf_beta', 2.0)}")
                 print(f"  UKF kappa: {self.config.get('ukf_kappa', 0.0)}")
@@ -165,7 +173,9 @@ class EKFEnvironment:
 
     def move_target(self):
         """Move target with random walk."""
-        self.target_pos += self.target_rng.normal(0, self.config["target_motion_sigma"], 2)
+        self.target_pos += self.target_rng.normal(
+            0, self.config["target_motion_sigma"], 2
+        )
 
         # Apply boundary conditions (clip to arena)
         self.target_pos = self._clip_position(self.target_pos)

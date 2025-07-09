@@ -4,8 +4,8 @@ Main entry point for target tracking simulation with FilterPy-based filters.
 Supports both EKF and UKF with comprehensive visualization and CLI interface.
 
 Usage:
-    python main.py --filter FilterPy_EKF --adaptive-process
-    python main.py --filter FilterPy_UKF --adaptive-measurement --signal-max 25
+    python main.py --filter EKF --adaptive-process
+    python main.py --filter UKF --adaptive-measurement --signal-max 25
     python main.py --config custom_config.json --save-plots --verbose
 """
 
@@ -34,19 +34,19 @@ def create_parser():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  python main.py --filter FilterPy_EKF --adaptive-process
-  python main.py --filter FilterPy_UKF --adaptive-measurement --signal-max 25
+  python main.py --filter EKF --adaptive-process
+  python main.py --filter UKF --adaptive-measurement --signal-max 25
   python main.py --config my_config.json --save-plots --verbose
-  python main.py --filter FilterPy_EKF --max-steps 50000 --output-dir results/
+  python main.py --filter EKF --max-steps 50000 --output-dir results/
         """
     )
 
     # Filter configuration
     parser.add_argument(
         "--filter", 
-        choices=["FilterPy_EKF", "FilterPy_UKF"], 
-        default="FilterPy_EKF",
-        help="Filter type to use (default: FilterPy_EKF)"
+        choices=["EKF", "UKF"], 
+        default="EKF",
+        help="Filter type to use (default: EKF)"
     )
 
     # Adaptation options

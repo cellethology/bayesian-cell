@@ -274,8 +274,8 @@ def validate_filter_config(config):
     """
     # Check filter type
     filter_type = config.get("filter_type")
-    if filter_type not in ["FilterPy_EKF", "FilterPy_UKF"]:
-        raise ValueError(f"Invalid filter_type: {filter_type}. Must be 'FilterPy_EKF' or 'FilterPy_UKF'")
+    if filter_type not in ["EKF", "UKF"]:
+        raise ValueError(f"Invalid filter_type: {filter_type}. Must be 'EKF' or 'UKF'")
     
     # Check required numeric parameters
     required_numeric = [
@@ -304,7 +304,7 @@ def validate_filter_config(config):
             raise ValueError(f"Parameter {param} must be boolean")
     
     # UKF-specific parameter validation
-    if filter_type == "FilterPy_UKF":
+    if filter_type == "UKF":
         ukf_params = {"ukf_alpha": (0, 1), "ukf_beta": (0, None), "ukf_kappa": (None, None)}
         for param, (min_val, max_val) in ukf_params.items():
             if param in config:
