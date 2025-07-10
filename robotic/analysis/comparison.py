@@ -22,14 +22,8 @@ def run_single_ekf_simulation(args):
     config_copy = config.copy()
     config_copy.pop("random_seed", None)
 
-    # Set up separate random states for fair comparison
-    target_rng = np.random.RandomState(seed)  # default_rng also works
-    robot_rng = np.random.RandomState(seed + 1000)
-
     # Create environment with consistent random states
-    env = EKFEnvironment(
-        config_copy, verbose=verbose, target_rng=target_rng, robot_rng=robot_rng
-    )
+    env = EKFEnvironment(config_copy, verbose=verbose, random_seed=seed)
 
     results = env.run_simulation()
 
@@ -37,7 +31,7 @@ def run_single_ekf_simulation(args):
     sigma_mean = (
         np.mean(results["sigma_history"])
         if len(results["sigma_history"]) > 0
-        else config.get("baseline_process_noise", 0.5)
+        else config.get("baseline_process_noise")
     )
     sigma_std = (
         np.std(results["sigma_history"]) if len(results["sigma_history"]) > 0 else 0.0
@@ -50,8 +44,8 @@ def run_single_ekf_simulation(args):
         "target_reached": results["target_reached"],
         "sigma_mean": sigma_mean,
         "sigma_std": sigma_std,
-        "adaptive_process_noise": config.get("adaptive_process_noise", False),
-        "adaptive_measurement_noise": config.get("adaptive_measurement_noise", False),
+        "adaptive_process_noise": config.get("adaptive_process_noise"),
+        "adaptive_measurement_noise": config.get("adaptive_measurement_noise"),
     }
 
     if collect_trajectories:

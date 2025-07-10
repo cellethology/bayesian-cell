@@ -15,7 +15,7 @@ class EKFEnvironment:
     through unified interface.
     """
 
-    def __init__(self, config=None, verbose=False, target_rng=None, robot_rng=None):
+    def __init__(self, config, verbose=False, random_seed=None):
         """
         Initialize EKF environment with configuration.
 
@@ -25,53 +25,14 @@ class EKFEnvironment:
             target_rng: Optional random state for target movement (defaults to np.random)
             robot_rng: Optional random state for robot movement and measurements (defaults to np.random)
         """
-        # Set up configuration with defaults
-        self.config = {
-            # Arena parameters
-            "arena_min": 0.0,
-            "arena_max": 200.0,
-            "distance_tolerance": 2.0,
-            # Signal parameters
-            "signal_max": 40.0,  # c0
-            "signal_decay": 0.05,  # lambda
-            # Robot parameters
-            "robot_start_pos": [80.0, 80.0],
-            "robot_step_size": 0.3,
-            "actuator_noise": 0.2,  # sigma_u
-            # Target parameters
-            "target_true_pos": [120.0, 120.0],
-            "target_motion_sigma": 0.5,  # sigma_Q baseline
-            # EKF parameters
-            "initial_belief_mean": [100.0, 100.0],
-            "initial_belief_variance": 100.0,
-            "baseline_process_noise": 0.5,
-            "adaptive_process_noise": False,
-            "alpha_R": 0.01,
-            "adaptive_measurement_noise": False,
-            # Simulation parameters
-            "max_steps": 1000000,
-            "random_seed": 55,
-        }
 
-        if config is not None:
-            self.config.update(config)
+        self.config = config
 
         self.verbose = verbose
 
         # Store random number generators for consistent randomness
-        self.target_rng = (
-            target_rng
-            if target_rng is not None
-            else np.random.default_rng(seed=self.config["random_seed"])
-        )
-        self.robot_rng = (
-            robot_rng
-            if robot_rng is not None
-            else np.random.default_rng(seed=self.config["random_seed"])
-        )
-
-        # Don't set random seed here - let comparison script control it
-        # Only set seed if explicitly requested for single simulations
+        self.target_rng = np.random.default_rng(seed=random_seed)
+        self.robot_rng = np.random.default_rng(seed=random_seed + 1000)
 
         # Initialize positions
         self.robot_pos = np.array(self.config["robot_start_pos"], dtype=float)
@@ -89,15 +50,13 @@ class EKFEnvironment:
         elif filter_type == "UKF":
             self.filter = FilterPyUnscentedKalmanFilter(self.config)
         else:
-            raise ValueError(
-                f"Unknown filter type: {filter_type}. Use 'EKF' or 'UKF'."
-            )
+            raise ValueError(f"Unknown filter type: {filter_type}. Use 'EKF' or 'UKF'.")
 
         # Keep backward compatibility
         self.ekf = self.filter
 
         # Pre-allocate trajectory storage for better performance
-        max_steps = self.config.get("max_steps", 1000000)
+        max_steps = self.config["max_steps"]
         self.robot_trajectory = np.zeros((max_steps + 1, 2))
         self.target_trajectory = np.zeros((max_steps + 1, 2))
         self.robot_trajectory[0] = self.robot_pos
@@ -108,16 +67,16 @@ class EKFEnvironment:
         self.trajectory_length = 1  # Track current length
 
         if verbose:
-            filter_type = self.config.get("filter_type", "EKF")
+            filter_type = self.config["filter_type"]
             print(f"Tracking Environment initialized with {filter_type}:")
             print(f"  Robot start: {self.robot_pos}")
             print(f"  Target start: {self.target_pos}")
 
             # Show UKF-specific parameters if using UKF
             if "UKF" in filter_type:
-                print(f"  UKF alpha: {self.config.get('ukf_alpha', 0.001)}")
-                print(f"  UKF beta: {self.config.get('ukf_beta', 2.0)}")
-                print(f"  UKF kappa: {self.config.get('ukf_kappa', 0.0)}")
+                print(f"  UKF alpha: {self.config['ukf_alpha']}")
+                print(f"  UKF beta: {self.config['ukf_beta']}")
+                print(f"  UKF kappa: {self.config['ukf_kappa']}")
 
     def _clip_position(self, pos):
         """Clip position to arena boundaries."""
@@ -263,7 +222,7 @@ class EKFEnvironment:
         self.ekf.reset()
 
         # Reset pre-allocated arrays
-        max_steps = self.config.get("max_steps", 1000000)
+        max_steps = self.config["max_steps"]
         self.robot_trajectory = np.zeros((max_steps + 1, 2))
         self.target_trajectory = np.zeros((max_steps + 1, 2))
         self.robot_trajectory[0] = self.robot_pos

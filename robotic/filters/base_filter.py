@@ -19,27 +19,27 @@ class BaseFilter(ABC):
         """
         self.config = config
 
-        # Extract common parameters
-        self.c0 = config.get("signal_max", 40.0)
-        self.lam = config.get("signal_decay", 0.03)
-        self.sigma_Q = config.get("baseline_process_noise", 0.5)
-        self.sigma_u = config.get("actuator_noise", 0.2)
-        self.is_adaptive = config.get("adaptive_process_noise", False)
-        self.alpha_R = config.get("alpha_R", 0.01)
-        self.adaptive_measurement_noise = config.get(
-            "adaptive_measurement_noise", False
-        )
-        self.eps = config.get("eps", 1.0)
+        # Environment parameters
+        self.c0 = config.get("signal_max")
+        self.lam = config.get("signal_decay")
+
+        # Filter parameters
+        self.sigma_Q = config.get("baseline_process_noise")
+        self.sigma_u = config.get("actuator_noise")
+        self.is_adaptive = config.get("adaptive_process_noise")
+        self.alpha_R = config.get("alpha_R")
+        self.adaptive_measurement_noise = config.get("adaptive_measurement_noise")
+        self.eps = config.get("eps")
 
         # Initialize state
-        self.mu = np.array(config.get("initial_belief_mean", [100.0, 100.0]))
-        self.Sigma = np.eye(2) * config.get("initial_belief_variance", 100.0)
+        self.mu = np.array(config.get("initial_belief_mean"))
+        self.Sigma = np.eye(2) * config.get("initial_belief_variance")
 
         # Ensure positive definiteness
         self.Sigma += 1e-10 * np.eye(2)
 
         # Set measurement noise based on initial geometry
-        initial_robot_pos = np.array(config.get("robot_start_pos", [80.0, 80.0]))
+        initial_robot_pos = np.array(config.get("robot_start_pos"))
         self.sigma_z = np.sqrt(self._h(self.mu, initial_robot_pos))
         self.R_est = self.sigma_z**2
 
@@ -83,12 +83,12 @@ class BaseFilter(ABC):
         if initial_mean is not None:
             self.mu = np.array(initial_mean)
         else:
-            self.mu = np.array(self.config.get("initial_belief_mean", [100.0, 100.0]))
+            self.mu = np.array(self.config.get("initial_belief_mean"))
 
         if initial_covariance is not None:
             self.Sigma = initial_covariance
         else:
-            self.Sigma = np.eye(2) * self.config.get("initial_belief_variance", 100.0)
+            self.Sigma = np.eye(2) * self.config.get("initial_belief_variance")
 
         # Ensure positive definiteness
         self.Sigma += 1e-10 * np.eye(2)
@@ -98,9 +98,7 @@ class BaseFilter(ABC):
 
         # Reset adaptive measurement noise estimate
         if hasattr(self, "config"):
-            initial_robot_pos = np.array(
-                self.config.get("robot_start_pos", [80.0, 80.0])
-            )
+            initial_robot_pos = np.array(self.config.get("robot_start_pos"))
             self.R_est = self._h(self.mu, initial_robot_pos)
 
     def _determine_process_noise(self, measurement):
