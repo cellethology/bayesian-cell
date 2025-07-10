@@ -89,13 +89,7 @@ class EKFEnvironment:
 
     def get_signal_measurement(self, step):
         """Generate noisy signal measurement at current robot position."""
-        # True expected signal using Euclidean distance
-        distance = self._distance(self.target_pos, self.robot_pos)
-        lambda_true = self.config["signal_max"] * np.exp(
-            -self.config["signal_decay"] * distance
-        )
-
-        # Poisson noise
+        lambda_true = self.ekf._h(self.target_pos, self.robot_pos)
         measurement = self.robot_rng.poisson(lambda_true)
         self.measurements[step] = measurement
 

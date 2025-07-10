@@ -120,11 +120,3 @@ class BaseFilter(ABC):
             self.R_est = (1 - self.alpha_R) * self.R_est + self.alpha_R * (
                 innovation**2
             )
-
-    def _ensure_positive_definite(self, matrix):
-        """Ensure matrix is positive definite."""
-        # Make symmetric
-        matrix = 0.5 * (matrix + matrix.T)
-        # Add small regularization to diagonal
-        matrix += 1e-10 * np.eye(matrix.shape[0])
-        return matrix

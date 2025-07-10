@@ -60,7 +60,7 @@ class FilterPyExtendedKalmanFilter(BaseFilter):
             H: Jacobian matrix (1x2)
         """
         # Get current robot position from stored value
-        robot_pos = getattr(self, "_current_robot_pos", np.array([0.0, 0.0]))
+        robot_pos = getattr(self, "_current_robot_pos")
 
         d = np.linalg.norm(x - robot_pos) + 1e-9  # avoid division by zero
         h_val = self._h(x, robot_pos)
