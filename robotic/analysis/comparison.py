@@ -23,8 +23,8 @@ def run_single_ekf_simulation(args):
     config_copy.pop("random_seed", None)
 
     # Set up separate random states for fair comparison
-    target_rng = np.random.default_rng(seed)  # Same for all methods with same seed
-    robot_rng = np.random.default_rng(seed + 1000)  # Different for robot behavior
+    target_rng = np.random.RandomState(seed)  # default_rng also works
+    robot_rng = np.random.RandomState(seed + 1000)
 
     # Create environment with consistent random states
     env = EKFEnvironment(
