@@ -150,7 +150,12 @@ def create_mean_plot_with_sem(
     plt.xlabel("Peak Signal Strength", fontsize=14)
     plt.ylabel("Mean Steps to Target (thousands)", fontsize=14)
     # plt.yscale("log")  # Log scale for y-axis
-    plt.legend(fontsize=14, frameon=False)
+    # change legend name
+    plt.legend(
+        fontsize=14,
+        frameon=False,
+        labels=["standard EKF", "coupled EKF", "adaptive EKF"],
+    )
     plt.grid(True, alpha=0.3)
 
     # Remove top and right spines

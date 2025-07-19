@@ -1,18 +1,20 @@
 %% simulate environment with different ECM binding rate
+clear all
+
 load('default_tissue_sim_param','params');
-params.kecmoff = 1;
+params.kecmoff = 0.05;
 params.tTot = 180;
-params.releaseC = 4;
+params.releaseC = 1;
 params.trelease = params.tTot;
 params.fspeed = 0;
 params.gammas = 1e-2;
 
-fname = "tissue_env_koff=1";
+fname = "tissue_env_koff=5e-2";
 [csol, cbound] = sim_tissue(params,fname);
 
 %% visualizing ligand landscape
 colormap('hot')
-files_to_load = ["tissue_env_koff=1e-4",  "tissue_env_koff=1e-3", "tissue_env_koff=1e-2", "tissue_env_koff=1e-1", "tissue_env_koff=1"];
+files_to_load = ["tissue_env_koff=1e-3", "tissue_env_koff=5e-2", "tissue_env_koff=1e-1"];
 n = length(files_to_load);
 tiledlayout(1,n)
 for ii = 1:n
