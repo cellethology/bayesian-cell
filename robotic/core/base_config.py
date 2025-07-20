@@ -58,10 +58,10 @@ def get_method_configs():
             "adaptive_process_noise": True,
             "adaptive_measurement_noise": False,
         },
-        "Adaptive EKF": {
-            "adaptive_process_noise": False,
-            "adaptive_measurement_noise": True,
-        },
+        # "Adaptive EKF": {
+        #     "adaptive_process_noise": False,
+        #     "adaptive_measurement_noise": True,
+        # },
     }
 
 
@@ -75,5 +75,5 @@ def get_signal_max_study_config():
     return {
         "signal_decay": 0.05,  # Fixed for this study
         "n_runs": 400,
-        "signal_max_values": [5, 10, 15, 20, 25, 30, 35, 40],
+        "signal_max_values": [10],
     }

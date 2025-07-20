@@ -31,8 +31,8 @@ class EKFEnvironment:
         self.verbose = verbose
 
         # Store random number generators for consistent randomness
-        self.target_rng = np.random.default_rng(seed=random_seed)
-        self.robot_rng = np.random.default_rng(seed=random_seed + 1000)
+        self.target_rng = np.random.RandomState(seed=random_seed)
+        self.robot_rng = np.random.RandomState(seed=random_seed + 1000)
 
         # Initialize positions
         self.robot_pos = np.array(self.config["robot_start_pos"], dtype=float)
