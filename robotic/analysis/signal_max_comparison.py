@@ -98,6 +98,7 @@ def run_signal_max_comparison(inspect_trajectory=False):
                 step_size=1,
                 save_path=f"output/trajectory_comparison.pdf",
                 config_names=method_names,
+                with_poisson_noise=True,
             )
 
     # Save all results to CSV

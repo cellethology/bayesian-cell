@@ -753,6 +753,7 @@ class FilterComparison:
         save_path: str = None,
         step_size: int = 20,
         config_names: list = None,
+        with_poisson_noise: bool = False,
     ):
         """
         Plot trajectory comparison with separate side-by-side plots for one pair,
@@ -764,6 +765,8 @@ class FilterComparison:
             figsize: Figure size
             save_path: Optional path to save figure
             step_size: Plot every Nth point to reduce clutter (default: 20)
+            config_names: Optional list to specify and order configurations
+            with_poisson_noise: If True, use Poisson-sampled signal field instead of mean
 
         Returns:
             matplotlib figure
@@ -795,18 +798,16 @@ class FilterComparison:
         # Create side-by-side plots
         fig, (ax1, ax2) = plt.subplots(1, 2, figsize=figsize)
 
-        # Get signal field from environment or config (backward compatibility)
-        if "env" in traj_data1:
-            env1 = traj_data1["env"]
-            signal_field = self._compute_signal_field(env1)
-            arena_min = env1.config["arena_min"]
-            arena_max = env1.config["arena_max"]
-        else:
-            # Use config directly when env is not available
-            config1 = traj_data1["config"]
-            signal_field = self._compute_signal_field_from_config(config1)
-            arena_min = config1["arena_min"]
-            arena_max = config1["arena_max"]
+        # Get signal field from config
+        config1 = traj_data1["config"]
+        robot_rng = None
+        if with_poisson_noise:
+            # Create robot_rng using the same seed pattern as the environment
+            seed = traj_data1["seed"]
+            robot_rng = np.random.default_rng(seed=seed + 1000)
+        signal_field = self._compute_signal_field_from_config(config1, with_poisson_noise, robot_rng)
+        arena_min = config1["arena_min"]
+        arena_max = config1["arena_max"]
         im1 = ax1.imshow(
             signal_field,
             extent=[arena_min, arena_max, arena_min, arena_max],
@@ -814,7 +815,9 @@ class FilterComparison:
             cmap="Greens",
             alpha=0.9,
         )
-        im2 = ax2.imshow(
+        
+        # Add signal field to second subplot as well (use same field for consistency)
+        ax2.imshow(
             signal_field,
             extent=[arena_min, arena_max, arena_min, arena_max],
             origin="lower",
@@ -823,25 +826,20 @@ class FilterComparison:
         )
 
         # Plot robot trajectories with time-based color intensity
-        env_or_config = env1 if "env" in traj_data1 else config1
         self._plot_trajectory_with_time_colors(
-            ax1, robot_trajectory1, "Robot", "blue", env_or_config, step_size
+            ax1, robot_trajectory1, "Robot", "blue", config1, step_size
         )
         self._plot_trajectory_with_time_colors(
-            ax2, robot_trajectory2, "Robot", "blue", env_or_config, step_size
+            ax2, robot_trajectory2, "Robot", "blue", config2, step_size
         )
 
         # Plot target trajectories with time-based color intensity
         self._plot_trajectory_with_time_colors(
-            ax1, target_trajectory1, "Target", "red", env_or_config, step_size
+            ax1, target_trajectory1, "Target", "red", config1, step_size
         )
         self._plot_trajectory_with_time_colors(
-            ax2, target_trajectory2, "Target", "red", env_or_config, step_size
+            ax2, target_trajectory2, "Target", "red", config2, step_size
         )
-
-        # Set titles with bigger fonts
-        # ax1.set_title(f"{config_names[0]}", fontsize=16, fontweight='bold')
-        # ax2.set_title(f"{config_names[1]}", fontsize=16, fontweight='bold')
 
         # Set axis labels with bigger fonts
         ax1.set_xlabel("X Position", fontsize=16)
@@ -1121,8 +1119,17 @@ class FilterComparison:
 
         return signal_field
 
-    def _compute_signal_field_from_config(self, config):
-        """Compute signal field for visualization using config dictionary."""
+    def _compute_signal_field_from_config(self, config, with_poisson_noise=False, robot_rng=None):
+        """Compute signal field for visualization using config dictionary.
+        
+        Args:
+            config: Configuration dictionary
+            with_poisson_noise: If True, sample from Poisson distribution instead of using mean
+            robot_rng: Random number generator for Poisson sampling (required if with_poisson_noise=True)
+        
+        Returns:
+            Signal field array
+        """
         arena_min = config["arena_min"]
         arena_max = config["arena_max"]
         signal_max = config["signal_max"]
@@ -1138,6 +1145,12 @@ class FilterComparison:
         target_pos = np.array(target_pos)
         distances = np.sqrt((X - target_pos[0]) ** 2 + (Y - target_pos[1]) ** 2)
         signal_field = signal_max * np.exp(-signal_decay * distances)
+
+        # Optionally add Poisson noise
+        if with_poisson_noise:
+            if robot_rng is None:
+                raise ValueError("robot_rng must be provided when with_poisson_noise=True")
+            signal_field = robot_rng.poisson(signal_field)
 
         return signal_field
 
