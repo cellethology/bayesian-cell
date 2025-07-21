@@ -181,7 +181,7 @@ def create_mean_plot_with_sem(
 def create_median_plot_with_ci(
     results_df,
     save_path="output/signal_max_median_comparison_plot.pdf",
-    figsize=(4.5, 4),
+    figsize=(6, 4),
     show_plot=True,
     confidence=0.95,
 ):
@@ -276,7 +276,6 @@ def create_median_plot_with_ci(
     # Formatting
     plt.xlabel("Peak Signal Strength", fontsize=12)
     plt.ylabel("Median Steps to Target (thousands)", fontsize=12)
-    # plt.yscale("log")  # Log scale for y-axis
     plt.legend(fontsize=11, frameon=False)
     plt.grid(True, alpha=0.3)
     plt.yscale("log")
@@ -402,10 +401,10 @@ def create_all_plots(results_file="signal_max_comparison_results.csv", show_plot
     print("\nCreating plots...")
 
     # Main mean plot with SEM
-    fig1 = create_mean_plot_with_sem(results, show_plot=show_plots)
+    create_mean_plot_with_sem(results, show_plot=show_plots)
 
     # Median plot with CI
-    fig2 = create_median_plot_with_ci(results, show_plot=show_plots)
+    create_median_plot_with_ci(results, show_plot=show_plots)
 
     # # Success rate plot
     # fig3 = create_success_rate_plot(results, show_plot=show_plots)
@@ -417,8 +416,6 @@ def create_all_plots(results_file="signal_max_comparison_results.csv", show_plot
     print("  - signal_max_comparison_plot.pdf (mean plot with SEM error bars)")
     print("  - signal_max_median_comparison_plot.pdf (median plot with CI error bars)")
     print("  - signal_max_success_rates.png (success rate comparison)")
-
-    return fig1
 
 
 def quick_plot(

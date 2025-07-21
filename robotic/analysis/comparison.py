@@ -893,12 +893,25 @@ class FilterComparison:
             ax2, robot_trajectory2, "Robot", "blue", config2, step_size
         )
 
-        # Plot target trajectories with time-based color intensity
-        self._plot_trajectory_with_time_colors(
-            ax1, target_trajectory1, "Target", "red", config1, step_size
+        # Mark the target's final position
+        target_final_pos = shared_endpoint_target
+        ax1.plot(
+            target_final_pos[0],
+            target_final_pos[1],
+            "X",
+            color="red",
+            markersize=12,
+            markeredgewidth=2,
+            label="Target Position"
         )
-        self._plot_trajectory_with_time_colors(
-            ax2, target_trajectory2, "Target", "red", config2, step_size
+        ax2.plot(
+            target_final_pos[0],
+            target_final_pos[1],
+            "X",
+            color="red",
+            markersize=12,
+            markeredgewidth=2,
+            label="Target Position"
         )
 
         # Set axis labels with bigger fonts
@@ -910,6 +923,10 @@ class FilterComparison:
         # Make tick labels bigger
         ax1.tick_params(labelsize=14)
         ax2.tick_params(labelsize=14)
+
+        # Set 1:1 aspect ratio for both plots
+        ax1.set_aspect('equal')
+        ax2.set_aspect('equal')
 
         # Calculate proper layout: left_margin + 2*plot_width + gap + colorbar_width + right_margin = 1.0
         # Reserve space: bottom 15% for legend, right 20% for colorbar and margin
@@ -946,12 +963,14 @@ class FilterComparison:
 
         legend_elements = [
             Line2D([0], [0], color="blue", lw=2, label="Robot Trajectory"),
-            Line2D([0], [0], color="red", lw=2, label="Target Trajectory"),
             Line2D(
                 [0], [0], marker="o", color="black", lw=0, markersize=8, label="Start"
             ),
             Line2D(
                 [0], [0], marker="*", color="black", lw=0, markersize=10, label="End"
+            ),
+            Line2D(
+                [0], [0], marker="X", color="red", lw=0, markersize=10, markeredgewidth=2, label="Target Position"
             ),
         ]
         fig.legend(
