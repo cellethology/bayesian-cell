@@ -760,6 +760,7 @@ class FilterComparison:
         config_names: list = None,
         with_poisson_noise: bool = False,
         spatial_correlation_length: float = 0.0,
+        spatial_correlation_strength: float = 0.5,
     ):
         """
         Plot trajectory comparison with separate side-by-side plots for one pair,
@@ -774,6 +775,7 @@ class FilterComparison:
             config_names: Optional list to specify and order configurations
             with_poisson_noise: If True, use Poisson-sampled signal field instead of mean
             spatial_correlation_length: Length scale for spatial correlation (0 = no correlation)
+            spatial_correlation_strength: How much correlation affects signal intensity
 
         Returns:
             matplotlib figure
@@ -811,9 +813,13 @@ class FilterComparison:
         if with_poisson_noise:
             # Create robot_rng using the same seed pattern as the environment
             seed = traj_data1["seed"]
-            robot_rng = np.random.RandomState(seed=seed + 1000)
+            robot_rng = np.random.default_rng(seed=seed + 1000)
         signal_field = self._compute_signal_field_from_config(
-            config1, with_poisson_noise, robot_rng, spatial_correlation_length
+            config1,
+            with_poisson_noise,
+            robot_rng,
+            spatial_correlation_length,
+            spatial_correlation_strength,
         )
         arena_min = config1["arena_min"]
         arena_max = config1["arena_max"]
@@ -1129,7 +1135,12 @@ class FilterComparison:
         return signal_field
 
     def _compute_signal_field_from_config(
-        self, config, with_poisson_noise=False, robot_rng=None, spatial_correlation_length=0.0
+        self,
+        config,
+        with_poisson_noise=False,
+        robot_rng=None,
+        spatial_correlation_length=0.0,
+        spatial_correlation_strength=0.5,
     ):
         """Compute signal field for visualization using config dictionary.
 
@@ -1138,6 +1149,7 @@ class FilterComparison:
             with_poisson_noise: If True, sample from Poisson distribution instead of using mean
             robot_rng: Random number generator for Poisson sampling (required if with_poisson_noise=True)
             spatial_correlation_length: Length scale for spatial correlation (0 = no correlation)
+            spatial_correlation_strength: How much correlation affects signal intensity
 
         Returns:
             Signal field array
@@ -1164,11 +1176,16 @@ class FilterComparison:
                 raise ValueError(
                     "robot_rng must be provided when with_poisson_noise=True"
                 )
-            
+
             if spatial_correlation_length > 0:
                 # Add spatially correlated noise
                 signal_field = self._add_spatially_correlated_poisson_noise(
-                    signal_field, spatial_correlation_length, robot_rng, x, y
+                    signal_field,
+                    spatial_correlation_length,
+                    robot_rng,
+                    x,
+                    y,
+                    spatial_correlation_strength,
                 )
             else:
                 # Independent Poisson noise (original behavior)
@@ -1176,85 +1193,94 @@ class FilterComparison:
 
         return signal_field
 
-    def _add_spatially_correlated_poisson_noise(self, signal_field, correlation_length, robot_rng, x, y):
+    def _add_spatially_correlated_poisson_noise(
+        self,
+        signal_field,
+        correlation_length,
+        robot_rng,
+        x,
+        y,
+        correlation_strength=0.5,
+    ):
         """Add spatially correlated Poisson noise to signal field.
-        
+
         Args:
             signal_field: Base signal field (mean rates)
             correlation_length: Spatial correlation length scale
             robot_rng: Random number generator
             x, y: Coordinate arrays
-            
+            correlation_strength: How much correlation affects signal intensity
+
         Returns:
             Signal field with correlated Poisson noise
         """
         # Create coordinate grid for distance calculation
         X, Y = np.meshgrid(x, y)
-        
+
         # Generate spatially correlated Gaussian noise field
         gaussian_field = self._generate_correlated_gaussian_field(
             X, Y, correlation_length, robot_rng
         )
-        
+
         # Transform Gaussian field to correlated Poisson rates
         # Use log-normal transformation to ensure positive rates
         # log(λ_correlated) = log(λ_base) + σ * gaussian_field
         # where σ controls the strength of correlation
-        correlation_strength = 0.5  # Can be made tunable if needed
-        
+
         log_rates = np.log(signal_field + 1e-10)  # Add small epsilon to avoid log(0)
         correlated_log_rates = log_rates + correlation_strength * gaussian_field
         correlated_rates = np.exp(correlated_log_rates)
-        
+
         # Sample from Poisson with correlated rates
         return robot_rng.poisson(correlated_rates)
-    
+
     def _generate_correlated_gaussian_field(self, X, Y, correlation_length, robot_rng):
         """Generate spatially correlated Gaussian random field using spectral method.
-        
+
         Args:
-            X, Y: Coordinate meshgrids  
+            X, Y: Coordinate meshgrids
             correlation_length: Spatial correlation length
             robot_rng: Random number generator
-            
+
         Returns:
             Correlated Gaussian field
         """
         # Use spectral method for efficient generation of correlated field
         # This is much faster than generating full covariance matrix
-        
+
         # Get grid dimensions
         ny, nx = X.shape
-        
+
         # Create frequency grids
         kx = np.fft.fftfreq(nx, d=(X[0, 1] - X[0, 0]))
         ky = np.fft.fftfreq(ny, d=(Y[1, 0] - Y[0, 0]))
         KX, KY = np.meshgrid(kx, ky)
-        
+
         # Compute power spectral density for exponential correlation
         # PSD = (2π * σ² * L²) / (1 + (2πLk)²)
         k_squared = KX**2 + KY**2
         # Avoid division by zero at k=0
         psd = np.where(
             k_squared > 0,
-            (2 * np.pi * correlation_length**2) / (1 + (2 * np.pi * correlation_length)**2 * k_squared),
-            2 * np.pi * correlation_length**2  # Limit as k->0
+            (2 * np.pi * correlation_length**2)
+            / (1 + (2 * np.pi * correlation_length) ** 2 * k_squared),
+            2 * np.pi * correlation_length**2,  # Limit as k->0
         )
-        
+
         # Generate complex white noise in frequency domain
         white_noise_real = robot_rng.normal(0, 1, (ny, nx))
         white_noise_imag = robot_rng.normal(0, 1, (ny, nx))
         white_noise_fft = white_noise_real + 1j * white_noise_imag
-        
+
         # Scale by square root of PSD to get correlated field
         correlated_fft = white_noise_fft * np.sqrt(psd)
-        
+
         # Transform back to spatial domain and take real part
         correlated_field = np.real(np.fft.ifft2(correlated_fft))
-        
+
         # Normalize to have unit variance
         correlated_field = correlated_field / np.std(correlated_field)
-        
+
         return correlated_field
 
     def _plot_trajectory_with_time_colors(

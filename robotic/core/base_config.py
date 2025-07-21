@@ -37,6 +37,9 @@ def get_base_config():
         "eps": 1.0,  # Epsilon parameter for adaptive process noise
         "adaptive_measurement_noise": False,
         "alpha_R": 0.01,  # Lower learning rate for more stable estimates
+        # Spatial correlation parameters
+        "spatial_correlation_length": 5.0,  # 0 = no correlation (independent noise)
+        "spatial_correlation_strength": 0.5,  # How much correlation affects signal intensity
         # Simulation parameters
         "max_steps": 1200000,
     }
@@ -74,6 +77,6 @@ def get_signal_max_study_config():
     """
     return {
         "signal_decay": 0.05,  # Fixed for this study
-        "n_runs": 400,
-        "signal_max_values": [10],
+        "n_runs": 500,
+        "signal_max_values": [20],
     }

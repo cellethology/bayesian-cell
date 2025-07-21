@@ -31,8 +31,8 @@ class EKFEnvironment:
         self.verbose = verbose
 
         # Store random number generators for consistent randomness
-        self.target_rng = np.random.RandomState(seed=random_seed)
-        self.robot_rng = np.random.RandomState(seed=random_seed + 1000)
+        self.target_rng = np.random.default_rng(seed=random_seed)
+        self.robot_rng = np.random.default_rng(seed=random_seed + 1000)
 
         # Initialize positions
         self.robot_pos = np.array(self.config["robot_start_pos"], dtype=float)
@@ -66,6 +66,12 @@ class EKFEnvironment:
         self.measurements = np.zeros(max_steps)
         self.trajectory_length = 1  # Track current length
 
+        # Initialize spatial correlation field if enabled
+        self.correlation_field = None
+        self.correlation_interpolator = None
+        if self.config.get("spatial_correlation_length", 0.0) > 0:
+            self._initialize_correlation_field()
+
         if verbose:
             filter_type = self.config["filter_type"]
             print(f"Tracking Environment initialized with {filter_type}:")
@@ -90,9 +96,28 @@ class EKFEnvironment:
     def get_signal_measurement(self, step):
         """Generate noisy signal measurement at current robot position."""
         lambda_true = self.ekf._h(self.target_pos, self.robot_pos)
-        measurement = self.robot_rng.poisson(lambda_true)
-        self.measurements[step] = measurement
 
+        # Apply spatial correlation if enabled
+        if self.correlation_interpolator is not None:
+            # Get correlation value at robot position
+            correlation_value = self.correlation_interpolator(
+                [self.robot_pos[1], self.robot_pos[0]]
+            )[0]
+
+            # Apply log-normal transformation for correlated Poisson
+            correlation_strength = self.config.get("spatial_correlation_strength", 0.5)
+            log_lambda = np.log(lambda_true + 1e-10)  # Avoid log(0)
+            correlated_log_lambda = (
+                log_lambda + correlation_strength * correlation_value
+            )
+            lambda_correlated = np.exp(correlated_log_lambda)
+
+            measurement = self.robot_rng.poisson(lambda_correlated)
+        else:
+            # Original independent Poisson sampling
+            measurement = self.robot_rng.poisson(lambda_true)
+
+        self.measurements[step] = measurement
         return measurement
 
     def update_belief(self, measurement):
@@ -226,6 +251,10 @@ class EKFEnvironment:
         self.measurements = np.zeros(max_steps)
         self.trajectory_length = 1
 
+        # Re-initialize correlation field if enabled
+        if self.config.get("spatial_correlation_length", 0.0) > 0:
+            self._initialize_correlation_field()
+
     def compute_signal_field(self, target_pos=None):
         """
         Compute signal field over the entire arena for visualization.
@@ -258,3 +287,88 @@ class EKFEnvironment:
         )
 
         return X, Y, signal_grid
+
+    def _initialize_correlation_field(self):
+        """Initialize the spatial correlation field and interpolator."""
+        X, Y, gaussian_field = self._generate_correlation_field()
+
+        if gaussian_field is not None:
+            # Store the field and set up interpolation
+            self.correlation_field = gaussian_field
+
+            # Create interpolator for fast lookup during simulation
+            from scipy.interpolate import RegularGridInterpolator
+
+            x_coords = X[0, :]  # First row gives x coordinates
+            y_coords = Y[:, 0]  # First column gives y coordinates
+
+            self.correlation_interpolator = RegularGridInterpolator(
+                (y_coords, x_coords),  # Note: (y, x) order for RegularGridInterpolator
+                gaussian_field,
+                method="linear",
+                bounds_error=False,
+                fill_value=0.0,  # Outside arena gets zero correlation
+            )
+
+    def _generate_correlation_field(self):
+        """Generate spatially correlated noise field for the entire arena."""
+        if self.config["spatial_correlation_length"] <= 0:
+            return None, None, None  # No correlation
+
+        # Create coordinate grid for the entire arena
+        arena_min = self.config["arena_min"]
+        arena_max = self.config["arena_max"]
+
+        # Use higher resolution for correlation field (can be tuned)
+        grid_points = 100  # Fixed grid size for consistency
+        x = np.linspace(arena_min, arena_max, grid_points)
+        y = np.linspace(arena_min, arena_max, grid_points)
+        X, Y = np.meshgrid(x, y)
+
+        # Generate correlated Gaussian field using spectral method
+        correlation_length = self.config["spatial_correlation_length"]
+        gaussian_field = self._generate_correlated_gaussian_field(
+            X, Y, correlation_length
+        )
+
+        return X, Y, gaussian_field
+
+    def _generate_correlated_gaussian_field(self, X, Y, correlation_length):
+        """Generate spatially correlated Gaussian random field using spectral method."""
+        # Get grid dimensions
+        ny, nx = X.shape
+
+        # Create frequency grids
+        dx = X[0, 1] - X[0, 0] if nx > 1 else 1.0
+        dy = Y[1, 0] - Y[0, 0] if ny > 1 else 1.0
+        kx = np.fft.fftfreq(nx, d=dx)
+        ky = np.fft.fftfreq(ny, d=dy)
+        KX, KY = np.meshgrid(kx, ky)
+
+        # Compute power spectral density for exponential correlation
+        k_squared = KX**2 + KY**2
+        # Avoid division by zero at k=0
+        psd = np.where(
+            k_squared > 0,
+            (2 * np.pi * correlation_length**2)
+            / (1 + (2 * np.pi * correlation_length) ** 2 * k_squared),
+            2 * np.pi * correlation_length**2,  # Limit as k->0
+        )
+
+        # Generate complex white noise in frequency domain
+        white_noise_real = self.robot_rng.normal(0, 1, (ny, nx))
+        white_noise_imag = self.robot_rng.normal(0, 1, (ny, nx))
+        white_noise_fft = white_noise_real + 1j * white_noise_imag
+
+        # Scale by square root of PSD to get correlated field
+        correlated_fft = white_noise_fft * np.sqrt(psd)
+
+        # Transform back to spatial domain and take real part
+        correlated_field = np.real(np.fft.ifft2(correlated_fft))
+
+        # Normalize to have unit variance
+        std_dev = np.std(correlated_field)
+        if std_dev > 1e-10:  # Avoid division by zero
+            correlated_field = correlated_field / std_dev
+
+        return correlated_field
