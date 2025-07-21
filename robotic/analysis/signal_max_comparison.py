@@ -92,7 +92,7 @@ def run_signal_max_comparison(inspect_trajectory=False):
             trajectory_data = comparison.run_comparison(
                 n_runs=1,
                 collect_trajectories=True,
-                seed=3,
+                seed=17,
             )
             comparison.plot_trajectory_comparison_separate(
                 trajectory_data,
@@ -101,7 +101,7 @@ def run_signal_max_comparison(inspect_trajectory=False):
                 save_path=f"output/trajectory_comparison.pdf",
                 config_names=method_names,
                 with_poisson_noise=True,
-                spatial_correlation_length=5,
+                spatial_correlation_length=15,
                 spatial_correlation_strength=0.5,
             )
 

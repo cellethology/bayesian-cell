@@ -672,7 +672,11 @@ class FilterComparison:
             for config_name in [config1, config2]:
                 np.random.seed(run_seed + 1000)
 
-                env = EKFEnvironment(self.configs[config_name], verbose=False)
+                # Update config with max_steps for this run
+                run_config = self.configs[config_name].copy()
+                run_config["max_steps"] = max_steps
+
+                env = EKFEnvironment(run_config, verbose=False, random_seed=run_seed)
 
                 env.target_pos = target_start.copy()
                 env._pre_generated_target = pre_generated_target
@@ -688,7 +692,7 @@ class FilterComparison:
 
                 env.move_target = move_target_pregenerated.__get__(env, EKFEnvironment)
 
-                results = env.run_simulation(max_steps)
+                results = env.run_simulation()
 
                 # Cut target trajectory to match robot trajectory length
                 robot_steps = results["steps_completed"]
@@ -700,6 +704,7 @@ class FilterComparison:
                     "robot_trajectory": results.get("robot_trajectory", []),
                     "target_trajectory": np.array(cut_target_trajectory),
                     "env": env,
+                    "config": run_config,
                 }
 
             # Add both results to trajectories_data
@@ -761,6 +766,7 @@ class FilterComparison:
         with_poisson_noise: bool = False,
         spatial_correlation_length: float = 0.0,
         spatial_correlation_strength: float = 0.5,
+        contour_levels: int = 15,
     ):
         """
         Plot trajectory comparison with separate side-by-side plots for one pair,
@@ -776,6 +782,7 @@ class FilterComparison:
             with_poisson_noise: If True, use Poisson-sampled signal field instead of mean
             spatial_correlation_length: Length scale for spatial correlation (0 = no correlation)
             spatial_correlation_strength: How much correlation affects signal intensity
+            contour_levels: Number of contour levels to display (default: 15)
 
         Returns:
             matplotlib figure
@@ -823,21 +830,44 @@ class FilterComparison:
         )
         arena_min = config1["arena_min"]
         arena_max = config1["arena_max"]
-        im1 = ax1.imshow(
-            signal_field,
-            extent=[arena_min, arena_max, arena_min, arena_max],
-            origin="lower",
-            cmap="Greens",
-            alpha=0.9,
+
+        # Create coordinate grids for contour plotting
+        x = np.linspace(arena_min, arena_max, signal_field.shape[1])
+        y = np.linspace(arena_min, arena_max, signal_field.shape[0])
+        X, Y = np.meshgrid(x, y)
+
+        # Apply light smoothing to reduce roughness
+        from scipy.ndimage import gaussian_filter
+
+        smoothed_signal_field = gaussian_filter(signal_field, sigma=1.3)
+
+        # Draw contour plots instead of imshow
+        # Filled contours for background
+        contourf1 = ax1.contourf(
+            X, Y, smoothed_signal_field, levels=contour_levels, cmap="Greens", alpha=0.4
+        )
+        contourf2 = ax2.contourf(
+            X, Y, smoothed_signal_field, levels=contour_levels, cmap="Greens", alpha=0.4
         )
 
-        # Add signal field to second subplot as well (use same field for consistency)
-        ax2.imshow(
-            signal_field,
-            extent=[arena_min, arena_max, arena_min, arena_max],
-            origin="lower",
-            cmap="Greens",
-            alpha=0.9,
+        # Line contours for clarity
+        contour1 = ax1.contour(
+            X,
+            Y,
+            smoothed_signal_field,
+            levels=contour_levels // 2,
+            colors="darkgreen",
+            alpha=0.8,
+            linewidths=1.0,
+        )
+        ax2.contour(
+            X,
+            Y,
+            smoothed_signal_field,
+            levels=contour_levels // 2,
+            colors="darkgreen",
+            alpha=0.8,
+            linewidths=1.0,
         )
 
         # Plot robot trajectories with time-based color intensity
@@ -892,7 +922,7 @@ class FilterComparison:
         # Add colorbar in calculated position
         cbar_left = left_margin + plot_area_width + colorbar_gap
         cbar_ax = fig.add_axes([cbar_left, bottom_margin, colorbar_width, plot_height])
-        cbar = plt.colorbar(im1, cax=cbar_ax)
+        cbar = plt.colorbar(contourf1, cax=cbar_ax)
         cbar.set_label("Signal Strength", fontsize=16)
         cbar.ax.tick_params(labelsize=14)
 
