@@ -78,5 +78,5 @@ def get_signal_max_study_config():
     return {
         "signal_decay": 0.05,  # Fixed for this study
         "n_runs": 500,
-        "signal_max_values": [30],
+        "signal_max_values": [35],
     }

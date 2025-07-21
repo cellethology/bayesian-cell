@@ -92,7 +92,7 @@ def run_signal_max_comparison(inspect_trajectory=False):
             trajectory_data = comparison.run_comparison(
                 n_runs=1,
                 collect_trajectories=True,
-                seed=17,
+                seed=3,
             )
             comparison.plot_trajectory_comparison_separate(
                 trajectory_data,

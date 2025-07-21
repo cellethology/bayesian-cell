@@ -811,16 +811,31 @@ class FilterComparison:
         target_trajectory1 = np.array(traj_data1["target_trajectory"])
         target_trajectory2 = np.array(traj_data2["target_trajectory"])
 
+        # Truncate both trajectories to the shortest length
+        min_length = min(len(robot_trajectory1), len(robot_trajectory2))
+        robot_trajectory1 = robot_trajectory1[:min_length]
+        robot_trajectory2 = robot_trajectory2[:min_length]
+        target_trajectory1 = target_trajectory1[:min_length]
+        target_trajectory2 = target_trajectory2[:min_length]
+
         # Create side-by-side plots
         fig, (ax1, ax2) = plt.subplots(1, 2, figsize=figsize)
 
-        # Get signal field from config
-        config1 = traj_data1["config"]
+        # Get signal field based on target position at shared endpoint (shortest trajectory)
+        config1 = traj_data1["config"].copy()  # Make a copy to avoid modifying original
+        
+        # Use target position at the shared endpoint (min_length - 1 for 0-indexed)
+        shared_endpoint_target = target_trajectory1[-1]  # Both trajectories end at same point now
+        
+        config1["target_true_pos"] = shared_endpoint_target.tolist()  # Use shared endpoint position
+        
         robot_rng = None
         if with_poisson_noise:
             # Create robot_rng using the same seed pattern as the environment
             seed = traj_data1["seed"]
             robot_rng = np.random.default_rng(seed=seed + 1000)
+            
+        # Generate single signal field for the shared endpoint
         signal_field = self._compute_signal_field_from_config(
             config1,
             with_poisson_noise,
@@ -841,7 +856,7 @@ class FilterComparison:
 
         smoothed_signal_field = gaussian_filter(signal_field, sigma=1.3)
 
-        # Draw contour plots instead of imshow
+        # Draw contour plots using shared signal field
         # Filled contours for background
         contourf1 = ax1.contourf(
             X, Y, smoothed_signal_field, levels=contour_levels, cmap="Greens", alpha=0.4
