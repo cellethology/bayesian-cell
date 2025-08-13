@@ -87,7 +87,7 @@ def create_mean_plot_with_sem(
     # Color and style for each method
     method_styles = {
         "Standard EKF": {"color": "tab:blue", "marker": "o"},
-        "Signal-aware EKF": {"color": "tab:orange", "marker": "o"},
+        "Coupled EKF": {"color": "tab:orange", "marker": "o"},
         "Adaptive EKF": {"color": "tab:green", "marker": "o"},
     }
 
@@ -181,7 +181,7 @@ def create_mean_plot_with_sem(
 def create_median_plot_with_ci(
     results_df,
     save_path="output/signal_max_median_comparison_plot.pdf",
-    figsize=(6, 4),
+    figsize=(4, 4),
     show_plot=True,
     confidence=0.95,
 ):
@@ -203,7 +203,7 @@ def create_median_plot_with_ci(
     # Color and style for each method
     method_styles = {
         "Standard EKF": {"color": "tab:blue", "marker": "o"},
-        "Signal-aware EKF": {"color": "tab:orange", "marker": "o"},
+        "Coupled EKF": {"color": "tab:orange", "marker": "o"},
         "Adaptive EKF": {"color": "tab:green", "marker": "o"},
     }
 
@@ -216,6 +216,7 @@ def create_median_plot_with_ci(
 
     # Plot each method
     for method in method_names:
+
         method_medians = []
         ci_lowers = []
         ci_uppers = []
@@ -276,7 +277,11 @@ def create_median_plot_with_ci(
     # Formatting
     plt.xlabel("Peak Signal Strength", fontsize=12)
     plt.ylabel("Median Steps to Target (thousands)", fontsize=12)
-    plt.legend(fontsize=11, frameon=False)
+    plt.legend(
+        fontsize=12,
+        frameon=False,
+        labels=["standard EKF", "coupled EKF", "adaptive EKF"],
+    )
     plt.grid(True, alpha=0.3)
     plt.yscale("log")
 

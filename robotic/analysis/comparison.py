@@ -802,6 +802,7 @@ class FilterComparison:
         config1, config2 = config_names
 
         # Get data for the specified run
+        print(f"Plotting run {run_index} for {config1} and {config2}")
         traj_data1 = trajectories_data[config1][run_index]
         traj_data2 = trajectories_data[config2][run_index]
 
@@ -823,18 +824,22 @@ class FilterComparison:
 
         # Get signal field based on target position at shared endpoint (shortest trajectory)
         config1 = traj_data1["config"].copy()  # Make a copy to avoid modifying original
-        
+
         # Use target position at the shared endpoint (min_length - 1 for 0-indexed)
-        shared_endpoint_target = target_trajectory1[-1]  # Both trajectories end at same point now
-        
-        config1["target_true_pos"] = shared_endpoint_target.tolist()  # Use shared endpoint position
-        
+        shared_endpoint_target = target_trajectory1[
+            -1
+        ]  # Both trajectories end at same point now
+
+        config1["target_true_pos"] = (
+            shared_endpoint_target.tolist()
+        )  # Use shared endpoint position
+
         robot_rng = None
         if with_poisson_noise:
             # Create robot_rng using the same seed pattern as the environment
             seed = traj_data1["seed"]
             robot_rng = np.random.default_rng(seed=seed + 1000)
-            
+
         # Generate single signal field for the shared endpoint
         signal_field = self._compute_signal_field_from_config(
             config1,
@@ -861,12 +866,12 @@ class FilterComparison:
         contourf1 = ax1.contourf(
             X, Y, smoothed_signal_field, levels=contour_levels, cmap="Greens", alpha=0.4
         )
-        contourf2 = ax2.contourf(
+        ax2.contourf(
             X, Y, smoothed_signal_field, levels=contour_levels, cmap="Greens", alpha=0.4
         )
 
         # Line contours for clarity
-        contour1 = ax1.contour(
+        ax1.contour(
             X,
             Y,
             smoothed_signal_field,
@@ -890,7 +895,7 @@ class FilterComparison:
             ax1, robot_trajectory1, "Robot", "blue", config1, step_size
         )
         self._plot_trajectory_with_time_colors(
-            ax2, robot_trajectory2, "Robot", "blue", config2, step_size
+            ax2, robot_trajectory2, "Robot", "orange", config2, step_size
         )
 
         # Mark the target's final position
@@ -902,7 +907,7 @@ class FilterComparison:
             color="red",
             markersize=12,
             markeredgewidth=2,
-            label="Target Position"
+            label="Target Position",
         )
         ax2.plot(
             target_final_pos[0],
@@ -911,7 +916,7 @@ class FilterComparison:
             color="red",
             markersize=12,
             markeredgewidth=2,
-            label="Target Position"
+            label="Target Position",
         )
 
         # Set axis labels with bigger fonts
@@ -925,8 +930,8 @@ class FilterComparison:
         ax2.tick_params(labelsize=14)
 
         # Set 1:1 aspect ratio for both plots
-        ax1.set_aspect('equal')
-        ax2.set_aspect('equal')
+        ax1.set_aspect("equal")
+        ax2.set_aspect("equal")
 
         # Calculate proper layout: left_margin + 2*plot_width + gap + colorbar_width + right_margin = 1.0
         # Reserve space: bottom 15% for legend, right 20% for colorbar and margin
@@ -970,7 +975,14 @@ class FilterComparison:
                 [0], [0], marker="*", color="black", lw=0, markersize=10, label="End"
             ),
             Line2D(
-                [0], [0], marker="X", color="red", lw=0, markersize=10, markeredgewidth=2, label="Target Position"
+                [0],
+                [0],
+                marker="X",
+                color="red",
+                lw=0,
+                markersize=10,
+                markeredgewidth=2,
+                label="Target Position",
             ),
         ]
         fig.legend(

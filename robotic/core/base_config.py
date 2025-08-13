@@ -41,7 +41,7 @@ def get_base_config():
         "spatial_correlation_length": 15.0,  # 0 = no correlation (independent noise)
         "spatial_correlation_strength": 0.5,  # How much correlation affects signal intensity
         # Simulation parameters
-        "max_steps": 1200000,
+        "max_steps": 1500000,
     }
 
 
@@ -57,7 +57,7 @@ def get_method_configs():
             "adaptive_process_noise": False,
             "adaptive_measurement_noise": False,
         },
-        "Signal-aware EKF": {
+        "Coupled EKF": {
             "adaptive_process_noise": True,
             "adaptive_measurement_noise": False,
         },
@@ -77,6 +77,6 @@ def get_signal_max_study_config():
     """
     return {
         "signal_decay": 0.05,  # Fixed for this study
-        "n_runs": 500,
-        "signal_max_values": [35],
+        "n_runs": 700,
+        "signal_max_values": [25, 30, 35, 40, 45, 50],
     }

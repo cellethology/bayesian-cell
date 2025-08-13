@@ -75,10 +75,10 @@ def run_signal_max_comparison(inspect_trajectory=False):
 
             combined_results = pd.concat(all_results, ignore_index=True)
 
-            # Perform paired t-test: Signal-aware EKF vs Standard EKF
+            # Perform paired t-test: Coupled EKF vs Standard EKF
             print(f"\nPaired t-test for signal_max = {signal_max}:")
             test_results = comparison.perform_paired_ttest(
-                results, "Signal-aware EKF", "Standard EKF"
+                results, "Coupled EKF", "Standard EKF"
             )
 
             # Print the results
@@ -92,18 +92,18 @@ def run_signal_max_comparison(inspect_trajectory=False):
             trajectory_data = comparison.run_comparison(
                 n_runs=1,
                 collect_trajectories=True,
-                seed=3,
+                seed=24,
             )
             comparison.plot_trajectory_comparison_separate(
                 trajectory_data,
-                run_index=0,
-                step_size=3,
+                step_size=1,
                 save_path=f"output/trajectory_comparison.pdf",
                 config_names=method_names,
                 with_poisson_noise=True,
                 spatial_correlation_length=15,
                 spatial_correlation_strength=0.5,
             )
+            break
 
     # Save all results to CSV
     if not inspect_trajectory:
@@ -113,4 +113,4 @@ def run_signal_max_comparison(inspect_trajectory=False):
 
 
 if __name__ == "__main__":
-    run_signal_max_comparison(inspect_trajectory=False)
+    run_signal_max_comparison(inspect_trajectory=True)
