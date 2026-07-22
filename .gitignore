@@ -41,6 +41,9 @@ _result/
 *.env
 .env.local
 
+# Personal shell config (not part of the project)
+.zshrc
+
 # Ignore version control files
 .git/
 .gitignore
