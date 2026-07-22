@@ -52,7 +52,7 @@ def test_scalar_d_matches_uniform_vector_d():
 
 def test_coupled_diffusivity_is_monotonically_decreasing():
     """The whole point of the coupling: more signal -> less lateral mobility."""
-    p = P.replace(dcouple=True, z0=0.5, dn=2.0)
+    p = P.replace(dcouple=True, couple_form="hill", z0=0.5, dn=2.0)
     env = np.linspace(0.0, 500.0, 400)          # increasing ligand
     d = coupled_diffusivity(env, p)
     assert np.all(np.diff(d) < 0), "d(z) must strictly decrease in signal"
@@ -61,7 +61,7 @@ def test_coupled_diffusivity_is_monotonically_decreasing():
 
 
 def test_diffusivity_floor_is_respected():
-    p = P.replace(dcouple=True, z0=0.05, dn=4.0, dmin=0.25 * P.d)
+    p = P.replace(dcouple=True, couple_form="hill", z0=0.05, dn=4.0, dmin=0.25 * P.d)
     env = np.linspace(0.0, 5000.0, 200)
     d = coupled_diffusivity(env, p)
     assert d.min() >= 0.25 * P.d - 1e-15, "dmin floor violated"

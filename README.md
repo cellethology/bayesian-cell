@@ -18,9 +18,9 @@ Install [uv](https://docs.astral.sh/uv/), then from the repo root:
 uv sync                                              # create the env (numpy, scipy, matplotlib)
 uv run python run.py                                 # 100 cells, tissue point source, 4 h
 uv run python run.py --env radial_exp                # smooth analytic gradient instead
-uv run python run.py --noisy --nsamp 1               # single-sample Poisson (shot-noise) sensing
+uv run python run.py --no-noisy                      # deterministic sensing (MATLAB-style)
 uv run python run.py --d 0.02 --reps 5               # 5 repeats with different seeds
-uv run python run.py --dcouple --couple-form invsqrt # signal-coupled diffusivity
+uv run python run.py --dcouple                       # signal-coupled diffusivity
 uv run python run.py --help                          # every knob, grouped
 ```
 

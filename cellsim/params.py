@@ -1,7 +1,11 @@
 """Simulation parameters.
 
-Python port of the ``param`` struct threaded through ``legacy/src/*.m``. Defaults match
-``legacy/src/default_param.mat`` as overridden by ``legacy/run.m``.
+Python port of the ``param`` struct threaded through ``legacy/src/*.m``. Most
+defaults follow ``legacy/src/default_param.mat`` as overridden by ``legacy/run.m``,
+but the sensing defaults target the shot-noise-limited regime this project
+studies: ``noisy=True, nsamp=1`` (a single Poisson sample per step) rather than the
+MATLAB's deterministic sensing, and coupled diffusivity defaults to the
+``invsqrt`` form.
 """
 
 from __future__ import annotations
@@ -57,17 +61,17 @@ class Params:
 
     # --- sensing ---
     kd_nM: float = 10.0      # half-saturation, in nM (converted to counts below)
-    noisy: bool = False
-    nsamp: int = 30
+    noisy: bool = True       # Poisson shot noise on by default
+    nsamp: int = 1           # single sample per step (fully shot-noise-limited)
     receptornoise: float = 0.1
     conc_scale: float = 1.0  # multiplies the whole ligand field; <1 = weaker,
                              # noisier signal (fewer molecules -> more shot noise)
 
     # --- signal-coupled diffusivity (optional) ---
     dcouple: bool = False
-    couple_form: str = "hill"  # "hill": d0/(1+(z/z0)^n) on occupancy z;
-                               # "invsqrt": d0/sqrt(eps + count) on raw count
-                               # (direct analog of the EKF sigma_Q = base/sqrt(eps+z))
+    couple_form: str = "invsqrt"  # "invsqrt": d0/sqrt(eps + count) on raw count
+                                  # (direct analog of the EKF sigma_Q = base/sqrt(eps+z));
+                                  # "hill": d0/(1+(z/z0)^n) on occupancy z
     z0: float = 0.2          # occupancy midpoint (hill form)
     dn: float = 2.0          # Hill exponent (hill form)
     couple_eps: float = 1.0  # offset for invsqrt form

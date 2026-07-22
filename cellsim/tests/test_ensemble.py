@@ -32,7 +32,7 @@ REGIMES = [
      dict(noisy=True, dcouple=False),
      [(82.8, 0.7, "floor_sweep"), (82.6, 0.9, "d0_sweep")]),
     ("poisson nsamp=30, coupled z0=0.2 n=2",
-     dict(noisy=True, dcouple=True, z0=0.2, dn=2.0),
+     dict(noisy=True, dcouple=True, couple_form="hill", z0=0.2, dn=2.0),
      [(85.2, 0.6, "floor_sweep"), (85.4, 0.9, "d0_sweep")]),
 ]
 
@@ -75,7 +75,7 @@ def test_coupling_reproduces_the_benefit():
     small and n=5 is thin, so this only asserts the sign and rough size.
     """
     base, base_se = _measure(dict(noisy=True, dcouple=False))
-    coup, coup_se = _measure(dict(noisy=True, dcouple=True, z0=0.2, dn=2.0))
+    coup, coup_se = _measure(dict(noisy=True, dcouple=True, couple_form="hill", z0=0.2, dn=2.0))
     delta = coup - base
     assert delta > 0, f"coupling should help under noise, got {delta:+.1f} pts"
     assert delta < 10, f"implausibly large coupling effect: {delta:+.1f} pts"

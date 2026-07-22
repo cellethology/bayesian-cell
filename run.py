@@ -3,17 +3,17 @@
 Simulates an ensemble of cells chemotaxing up a ligand field and reports how many
 reach the source. Every knob below has a sensible default, so:
 
-    python run.py                                  # 100 cells, tissue point source, 4 h
+    python run.py                                  # defaults: shot-noise sensing (nsamp=1)
     python run.py --env radial_exp                 # smooth analytic gradient instead
-    python run.py --noisy --nsamp 1                # single-sample Poisson sensing
+    python run.py --no-noisy                       # deterministic sensing (MATLAB-style)
     python run.py --d 0.02 --stepsz 1.0 --reps 5   # sweep-style: 5 repeats
-    python run.py --dcouple --couple-form invsqrt  # signal-coupled diffusivity
+    python run.py --dcouple                        # signal-coupled diffusivity (invsqrt)
 
 Environments (--env):
     tissue_point_noflow   point source in heterogeneous tissue (default)
     tissue_env            edge source in tissue
     radial_exp            smooth analytic exponential gradient (clean control)
-    tissue_env_koff=1e-2  ... any file under environments/ (by stem)
+    tissue_env_koff=1e-2  ... any tissue-field file under tissue_sim/ (by stem)
 """
 
 from __future__ import annotations
@@ -54,13 +54,15 @@ def build_parser() -> argparse.ArgumentParser:
     rec.add_argument("--kd-nM", type=float, default=10.0, help="half-saturation (nM)")
 
     sense = ap.add_argument_group("sensing noise")
-    sense.add_argument("--noisy", action="store_true", help="Poisson sensing noise")
-    sense.add_argument("--nsamp", type=int, default=30, help="samples averaged per step")
+    sense.add_argument("--noisy", action=argparse.BooleanOptionalAction, default=True,
+                       help="Poisson sensing noise (on by default; --no-noisy for deterministic)")
+    sense.add_argument("--nsamp", type=int, default=1,
+                       help="Poisson samples averaged per step (1 = fully shot-noise-limited)")
 
     couple = ap.add_argument_group("signal-coupled diffusivity (optional)")
     couple.add_argument("--dcouple", action="store_true", help="make d depend on local signal")
-    couple.add_argument("--couple-form", default="hill", choices=["hill", "invsqrt"],
-                        help="hill: d0/(1+(z/z0)^n); invsqrt: d0/sqrt(eps+count)")
+    couple.add_argument("--couple-form", default="invsqrt", choices=["hill", "invsqrt"],
+                        help="invsqrt: d0/sqrt(eps+count) (default); hill: d0/(1+(z/z0)^n)")
     couple.add_argument("--z0", type=float, default=0.2)
     couple.add_argument("--dn", type=float, default=2.0)
     couple.add_argument("--couple-eps", type=float, default=1.0)
