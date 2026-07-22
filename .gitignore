@@ -51,6 +51,9 @@ _result/
 # Ignore Jupyter Notebook checkpoints
 .ipynb_checkpoints/
 
+# Local figures scratch area (not tracked / not pushed)
+figures/
+
 # Ignore data files
 *.csv
 # ...except the study results, which are the data behind the figures
