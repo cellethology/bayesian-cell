@@ -96,7 +96,7 @@ def run_signal_max_comparison(inspect_trajectory=False):
             )
             comparison.plot_trajectory_comparison_separate(
                 trajectory_data,
-                step_size=1,
+                step_size=2,
                 save_path=f"output/trajectory_comparison.pdf",
                 config_names=method_names,
                 with_poisson_noise=True,
@@ -113,4 +113,15 @@ def run_signal_max_comparison(inspect_trajectory=False):
 
 
 if __name__ == "__main__":
-    run_signal_max_comparison(inspect_trajectory=True)
+    import argparse
+
+    parser = argparse.ArgumentParser(
+        description="Run the signal_max sweep, or inspect a single trajectory."
+    )
+    parser.add_argument(
+        "--inspect-trajectory",
+        action="store_true",
+        help="Plot one seeded trajectory instead of running the sweep",
+    )
+    args = parser.parse_args()
+    run_signal_max_comparison(inspect_trajectory=args.inspect_trajectory)

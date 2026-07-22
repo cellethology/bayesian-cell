@@ -10,8 +10,12 @@ from tqdm import tqdm
 import pandas as pd
 from typing import Dict, Any, Optional
 import os
+import warnings
 from scipy import stats
 from core import EKFEnvironment, EKFVisualizer
+
+# Set Arial as default font
+plt.rcParams["font.family"] = "Arial"
 
 
 def run_single_ekf_simulation(args):
@@ -596,6 +600,26 @@ class FilterComparison:
         values1 = data1_paired[metric].values
         values2 = data2_paired[metric].values
 
+        # Runs that never reached the target are recorded at max_steps, so including
+        # them makes this a mixture of "how fast" and "did it finish" rather than a
+        # clean speed comparison. The current studies have none in these arms; warn
+        # rather than silently dropping them, since dropping biases against whichever
+        # config fails more often.
+        n_censored = 0
+        if "target_reached" in data1_paired.columns:
+            n_censored = int(
+                (~data1_paired["target_reached"]).sum()
+                + (~data2_paired["target_reached"]).sum()
+            )
+            if n_censored > 0:
+                warnings.warn(
+                    f"{n_censored} of {2 * len(common_seeds)} runs in "
+                    f"{config1} vs {config2} did not reach the target and are "
+                    f"censored at max_steps; this p-value mixes speed with success "
+                    f"rate. Compare success rates separately.",
+                    stacklevel=2,
+                )
+
         statistic, p_value = stats.ttest_rel(values1, values2)
 
         # Effect size (Cohen's d for paired samples)
@@ -609,6 +633,7 @@ class FilterComparison:
             "config2": config2,
             "metric": metric,
             "n_pairs": len(common_seeds),
+            "n_censored": n_censored,
             "mean1": np.mean(values1),
             "mean2": np.mean(values2),
             "mean_difference": mean_diff,
@@ -812,39 +837,40 @@ class FilterComparison:
         target_trajectory1 = np.array(traj_data1["target_trajectory"])
         target_trajectory2 = np.array(traj_data2["target_trajectory"])
 
-        # Truncate both trajectories to the shortest length
-        min_length = min(len(robot_trajectory1), len(robot_trajectory2))
-        robot_trajectory1 = robot_trajectory1[:min_length]
-        robot_trajectory2 = robot_trajectory2[:min_length]
-        target_trajectory1 = target_trajectory1[:min_length]
-        target_trajectory2 = target_trajectory2[:min_length]
-
         # Create side-by-side plots
         fig, (ax1, ax2) = plt.subplots(1, 2, figsize=figsize)
 
-        # Get signal field based on target position at shared endpoint (shortest trajectory)
-        config1 = traj_data1["config"].copy()  # Make a copy to avoid modifying original
+        # Get signal fields based on each trajectory's endpoint
+        config1 = traj_data1["config"].copy()
+        config2 = traj_data2["config"].copy()
 
-        # Use target position at the shared endpoint (min_length - 1 for 0-indexed)
-        shared_endpoint_target = target_trajectory1[
-            -1
-        ]  # Both trajectories end at same point now
+        # Use target position at the end of each trajectory
+        trajectory1_endpoint_target = target_trajectory1[-1]
+        trajectory2_endpoint_target = target_trajectory2[-1]
 
-        config1["target_true_pos"] = (
-            shared_endpoint_target.tolist()
-        )  # Use shared endpoint position
+        config1["target_true_pos"] = trajectory1_endpoint_target.tolist()
+        config2["target_true_pos"] = trajectory2_endpoint_target.tolist()
 
-        robot_rng = None
+        # Generate signal fields for each trajectory's endpoint
+        robot_rng1 = None
+        robot_rng2 = None
         if with_poisson_noise:
-            # Create robot_rng using the same seed pattern as the environment
-            seed = traj_data1["seed"]
-            robot_rng = np.random.default_rng(seed=seed + 1000)
+            seed1 = traj_data1["seed"]
+            seed2 = traj_data2["seed"]
+            robot_rng1 = np.random.default_rng(seed=seed1 + 1000)
+            robot_rng2 = np.random.default_rng(seed=seed2 + 1000)
 
-        # Generate single signal field for the shared endpoint
-        signal_field = self._compute_signal_field_from_config(
+        signal_field1 = self._compute_signal_field_from_config(
             config1,
             with_poisson_noise,
-            robot_rng,
+            robot_rng1,
+            spatial_correlation_length,
+            spatial_correlation_strength,
+        )
+        signal_field2 = self._compute_signal_field_from_config(
+            config2,
+            with_poisson_noise,
+            robot_rng2,
             spatial_correlation_length,
             spatial_correlation_strength,
         )
@@ -852,29 +878,40 @@ class FilterComparison:
         arena_max = config1["arena_max"]
 
         # Create coordinate grids for contour plotting
-        x = np.linspace(arena_min, arena_max, signal_field.shape[1])
-        y = np.linspace(arena_min, arena_max, signal_field.shape[0])
+        x = np.linspace(arena_min, arena_max, signal_field1.shape[1])
+        y = np.linspace(arena_min, arena_max, signal_field1.shape[0])
         X, Y = np.meshgrid(x, y)
 
         # Apply light smoothing to reduce roughness
         from scipy.ndimage import gaussian_filter
 
-        smoothed_signal_field = gaussian_filter(signal_field, sigma=1.3)
+        smoothed_signal_field1 = gaussian_filter(signal_field1, sigma=1.3)
+        smoothed_signal_field2 = gaussian_filter(signal_field2, sigma=1.3)
 
-        # Draw contour plots using shared signal field
+        # Draw contour plots using separate signal fields
         # Filled contours for background
         contourf1 = ax1.contourf(
-            X, Y, smoothed_signal_field, levels=contour_levels, cmap="Greens", alpha=0.4
+            X,
+            Y,
+            smoothed_signal_field1,
+            levels=contour_levels,
+            cmap="Greens",
+            alpha=0.4,
         )
         ax2.contourf(
-            X, Y, smoothed_signal_field, levels=contour_levels, cmap="Greens", alpha=0.4
+            X,
+            Y,
+            smoothed_signal_field2,
+            levels=contour_levels,
+            cmap="Greens",
+            alpha=0.4,
         )
 
         # Line contours for clarity
         ax1.contour(
             X,
             Y,
-            smoothed_signal_field,
+            smoothed_signal_field1,
             levels=contour_levels // 2,
             colors="darkgreen",
             alpha=0.8,
@@ -883,7 +920,7 @@ class FilterComparison:
         ax2.contour(
             X,
             Y,
-            smoothed_signal_field,
+            smoothed_signal_field2,
             levels=contour_levels // 2,
             colors="darkgreen",
             alpha=0.8,
@@ -898,11 +935,10 @@ class FilterComparison:
             ax2, robot_trajectory2, "Robot", "orange", config2, step_size
         )
 
-        # Mark the target's final position
-        target_final_pos = shared_endpoint_target
+        # Mark each trajectory's target final position
         ax1.plot(
-            target_final_pos[0],
-            target_final_pos[1],
+            trajectory1_endpoint_target[0],
+            trajectory1_endpoint_target[1],
             "X",
             color="red",
             markersize=12,
@@ -910,8 +946,8 @@ class FilterComparison:
             label="Target Position",
         )
         ax2.plot(
-            target_final_pos[0],
-            target_final_pos[1],
+            trajectory2_endpoint_target[0],
+            trajectory2_endpoint_target[1],
             "X",
             color="red",
             markersize=12,
@@ -960,14 +996,49 @@ class FilterComparison:
         cbar_left = left_margin + plot_area_width + colorbar_gap
         cbar_ax = fig.add_axes([cbar_left, bottom_margin, colorbar_width, plot_height])
         cbar = plt.colorbar(contourf1, cax=cbar_ax)
-        cbar.set_label("Signal Strength", fontsize=16)
+        cbar.set_label("Signal strength", fontsize=20)
         cbar.ax.tick_params(labelsize=14)
 
         # Add legend at bottom with proper spacing
         from matplotlib.lines import Line2D
 
+        from matplotlib.patches import Patch
+
+        # Create a custom legend entry that shows both colors
+        class MultiColorLine:
+            def __init__(self, colors, label):
+                self.colors = colors
+                self.label = label
+
+            def get_label(self):
+                return self.label
+
+        # Custom legend handler for multi-color lines
+        class MultiColorLineHandler:
+            def legend_artist(self, legend, orig_handle, fontsize, handlebox):
+                x0, y0 = handlebox.xdescent, handlebox.ydescent
+                width, height = handlebox.width, handlebox.height
+
+                # Draw two line segments with different colors
+                line1 = Line2D(
+                    [x0, x0 + width / 2],
+                    [y0 + height / 2, y0 + height / 2],
+                    color=orig_handle.colors[0],
+                    lw=2,
+                )
+                line2 = Line2D(
+                    [x0 + width / 2, x0 + width],
+                    [y0 + height / 2, y0 + height / 2],
+                    color=orig_handle.colors[1],
+                    lw=2,
+                )
+
+                handlebox.add_artist(line1)
+                handlebox.add_artist(line2)
+                return [line1, line2]
+
         legend_elements = [
-            Line2D([0], [0], color="blue", lw=2, label="Robot Trajectory"),
+            MultiColorLine(["blue", "orange"], "Robot trajectories"),
             Line2D(
                 [0], [0], marker="o", color="black", lw=0, markersize=8, label="Start"
             ),
@@ -985,13 +1056,15 @@ class FilterComparison:
                 label="Target Position",
             ),
         ]
+
         fig.legend(
             handles=legend_elements,
             loc="lower center",
             bbox_to_anchor=(0.5, -0.1),
             ncol=4,
-            fontsize=17,
+            fontsize=20,
             frameon=False,
+            handler_map={MultiColorLine: MultiColorLineHandler()},
         )
 
         if save_path:
@@ -1385,7 +1458,7 @@ class FilterComparison:
             "purple": "Purples",
         }
         cmap_name = color_map.get(base_color, "viridis")
-        colors = plt.cm.get_cmap(cmap_name)(np.linspace(0.3, 1.0, n_points))
+        colors = plt.get_cmap(cmap_name)(np.linspace(0.3, 1.0, n_points))
 
         # No periodic boundaries handling needed
         periodic = False
@@ -1408,7 +1481,7 @@ class FilterComparison:
             trajectory[0, 0],
             trajectory[0, 1],
             "o",
-            color=base_color,
+            color="black",
             markersize=8,
             label=f"{label} Start",
         )
@@ -1416,7 +1489,7 @@ class FilterComparison:
             trajectory[-1, 0],
             trajectory[-1, 1],
             "*",
-            color=base_color,
+            color="black",
             markersize=12,
             label=f"{label} End",
         )

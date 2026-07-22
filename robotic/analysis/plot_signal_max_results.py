@@ -7,6 +7,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 
+# Set Arial as default font
+plt.rcParams["font.family"] = "Arial"
+
 
 def bootstrap_median_ci(data, n_bootstrap=1000, confidence=0.95):
     """
@@ -181,7 +184,7 @@ def create_mean_plot_with_sem(
 def create_median_plot_with_ci(
     results_df,
     save_path="output/signal_max_median_comparison_plot.pdf",
-    figsize=(4, 4),
+    figsize=(6, 4),
     show_plot=True,
     confidence=0.95,
 ):
@@ -275,13 +278,16 @@ def create_median_plot_with_ci(
             print(f"Warning: No valid data points for {method}")
 
     # Formatting
-    plt.xlabel("Peak Signal Strength", fontsize=12)
-    plt.ylabel("Median Steps to Target (thousands)", fontsize=12)
+    plt.xlabel("Peak signal strength", fontsize=16)
+    plt.ylabel("Median steps to target (1000s)", fontsize=16)
     plt.legend(
-        fontsize=12,
+        fontsize=14,
         frameon=False,
-        labels=["standard EKF", "coupled EKF", "adaptive EKF"],
+        labels=["standard EKF", "cell-inspired EKF", "adaptive EKF"],
     )
+    # Increase tick label fontsize
+    plt.xticks(fontsize=14)
+    plt.yticks(fontsize=14)
     plt.grid(True, alpha=0.3)
     plt.yscale("log")
 
