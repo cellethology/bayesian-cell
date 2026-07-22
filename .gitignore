@@ -5,6 +5,7 @@ Thumbs.db
 # Ignore dependency directories
 node_modules/
 venv/
+.venv/
 __pycache__/
 *.pyc
 *.pyo
@@ -49,6 +50,8 @@ _result/
 
 # Ignore data files
 *.csv
+# ...except the study results, which are the data behind the figures
+!robotic/output/*.csv
 *.tsv
 *.json
 *.xml

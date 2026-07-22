@@ -1,169 +1,109 @@
-# Cellular Bayes Filtering for In Vivo Migration
+# Cell Navigation Simulator
 
-A comprehensive simulation framework for studying cell migration in tissue environments using Bayesian filtering and biochemical navigation strategies. This repository implements both MATLAB-based cellular simulations and traditional Python-based robotics algorithms.
+Simulates cells chemotaxing up a ligand gradient by Bayesian inference implemented
+in receptor biochemistry: the receptor-density profile around the membrane **is** a
+belief over the direction to the source, activity-driven recruitment is the
+likelihood update, lateral diffusion is the motion model, and the finite receptor
+pool enforces normalisation. An ensemble of cells races from a start ring toward a
+source; the simulator reports how many arrive and how fast.
 
-## Key Features
+The active codebase is **`cellsim/`** (Python). The original MATLAB implementation
+it was ported from lives in `legacy/` for reference.
 
-- **Multiple Navigation Strategies**: Biochemical gradient sensing, Bayesian filtering
-- **Tissue Environment Simulation**: Realistic tissue environments
-- **LEGI Models**: Local Excitation, Global Inhibition models
-- **Robotic Implementation**: Python equivalent using advanced filtering techniques (EKF)
+## Quick start
 
-## Directory Structure
+```bash
+pip install -r requirements.txt
+
+python run.py                                  # 100 cells, tissue point source, 4 h
+python run.py --env radial_exp                 # smooth analytic gradient instead
+python run.py --noisy --nsamp 1                # single-sample Poisson (shot-noise) sensing
+python run.py --d 0.02 --stepsz 1.0 --reps 5   # 5 repeats with different seeds
+python run.py --dcouple --couple-form invsqrt  # signal-coupled diffusivity
+python run.py --help                           # every knob, grouped
+```
+
+Each run prints the success rate and arrival-time distribution per repeat.
+
+## What you can vary
+
+| Group | Flags | What it controls |
+|---|---|---|
+| Environment | `--env`, `--source`, `--conc-scale` | which field, point/edge source, overall ligand level |
+| Cell | `--receptor`, `--decoder`, `--stepsz`, `--direction-noise` | sensing scheme, how the belief becomes motion, speed, steering noise |
+| Belief | `--d`, `--rtot`, `--kd-nM` | membrane diffusivity (belief blur), receptor pool, sensing affinity |
+| Sensing noise | `--noisy`, `--nsamp` | Poisson shot noise, samples averaged per step |
+| Coupling | `--dcouple`, `--couple-form`, `--z0`, `--dn`, `--couple-eps` | make diffusivity depend on local signal |
+| Run | `--hours`, `--cells`, `--reps`, `--seed` | time budget, ensemble size, repeats |
+
+**Environments** (`--env`): `tissue_point_noflow` (default; point source in
+heterogeneous tissue), `tissue_env` (edge source), `radial_exp` (smooth analytic
+exponential gradient — the clean, heterogeneity-free control), or any tissue-field
+`.mat` stem under `tissue_sim/` (e.g. `tissue_env_koff=1e-2`).
+
+## Using it as a library
+
+```python
+from cellsim import Params, race
+
+p = Params(noisy=True, nsamp=1, d=0.02, conc_scale=0.5)
+result = race("radial_exp", p, seed=0)
+print(result.summary())          # success rate + arrival quartiles
+```
+
+`simulate_cell` runs a single cell and returns its full trajectory; see
+`cellsim/__init__.py` for the public API.
+
+## Directory structure
 
 ```
 .
-├── src/                    # Core MATLAB navigation simulation code
-├── tissue_sim/            # Tissue environment generation and simulation
-│   ├── koff_variants/     # Different binding kinetics environments
-│   └── point_source/      # Point source gradient environments
-├── LEGI/                  # LEGI model implementations
-├── robotic/               # Python robotic implementation
-│   ├── core/             # Base environment and configuration
-│   ├── filters/          # EKF, UKF filter implementations
-│   ├── histogram_filter/ # Bayesian histogram filter
-│   └── analysis/         # Comparison and analysis tools
-├── run.m                  # Main MATLAB example script
-└── requirements.txt       # Python dependencies
+├── run.py               # command-line entry point
+├── cellsim/             # the simulator (active codebase)
+│   ├── params.py        #   parameters
+│   ├── environment.py   #   ligand fields (tissue .mat loader + analytic gradient)
+│   ├── receptor.py      #   sensing + Crank-Nicolson membrane operator
+│   ├── cell.py          #   single-cell simulation
+│   ├── ensemble.py      #   race N cells, score arrivals
+│   └── tests/           #   regression tests (see below)
+├── tissue_sim/          # tissue ligand-field data (.mat) that cellsim loads,
+│   ├── point_source/    #   alongside the MATLAB scripts that generated it
+│   └── koff_variants/   #   fields at different binding kinetics
+├── legacy/              # original MATLAB navigation code (reference only)
+│   └── src/
+├── LEGI/                # LEGI models (Shi et al. 2013), reference
+└── robotic/             # separate Python robotics/EKF study
 ```
 
-## Requirements
+## Tests
 
-### MATLAB Requirements
-
-- MATLAB R2018b or later
-- Statistics and Machine Learning Toolbox (for statistical functions)
-- Signal Processing Toolbox (recommended)
-
-### Python Requirements
-
-- Python 3.8+
-- Dependencies listed in `requirements.txt`:
-  - numpy, scipy, matplotlib
-  - filterpy (for Kalman filtering)
-  - Other scientific computing libraries
-
-## Installation
-
-### MATLAB Setup
-
-1. Clone the repository:
-
-   ```bash
-   git clone <repository-url>
-   cd bayesian-cell
-   ```
-2. Add the project directory and subdirectories to your MATLAB path:
-
-   ```matlab
-   addpath(genpath('/path/to/bayesian-cell'))
-   ```
-
-### Python Setup
-
-1. Install Python dependencies:
-
-   ```bash
-   pip install -r requirements.txt
-   ```
-2. Run Python simulations:
-
-   ```bash
-   cd robotic
-   python main.py
-   ```
-
-## Key Functions
-
-### racing_cells Function
-
-```matlab
-[schemerate,unifrate,statsummary] = racing_cells(fname, param, varargin)
-```
-
-Primary function for simulating cell migration in tissue environments.
-
-**Parameters:**
-
-- `fname`: Environment file name (e.g., "tissue_point_noflow")
-- `param`: Simulation parameters structure
-- **Optional Parameters:**
-  - `'task'`: "localization" or "retention" (default: "localization")
-  - `'envmodel'`: "tissue" or "grad" (default: "tissue")
-  - `'receptor'`: "feedback", "uniform", or "w1dist" (default: "feedback")
-  - `'decoder_method'`: "optimal_noise", "perfect", or "randomwalk"
-  - `'source'`: "edge" or "point" (default: "edge")
-  - `'save_data'`: 0 (no save), 1 (basic), 2 (all data) (default: 2)
-  - `'makeplot'`: Enable/disable plotting (default: true)
-
-**Returns:**
-
-- `schemerate`: Success rate using specified navigation strategy
-- `unifrate`: Success rate using uniform random strategy
-- `statsummary`: Detailed statistics summary
-
-## Usage Examples
-
-### Basic MATLAB Simulation
-
-Run the default example:
-
-```matlab
-run
-```
-
-### Custom Simulations
-
-#### Bayesian vs Gradient-tracking Comparison
-
-```matlab
-% Bayesian filtering approach
-bayes_rate = racing_cells("tissue_env", scheme_param, ...
-    "receptor", "feedback");
-
-% Pure biochemical approach  
-biochem_rate = racing_cells("tissue_env", scheme_param, ...
-    "receptor", "uniform");
-```
-
-#### Environment Variants
-
-```matlab
-% Different binding kinetics
-racing_cells("tissue_env_koff=1e-3", scheme_param);
-racing_cells("tissue_env_koff=1e-1", scheme_param);
-
-% Point source vs edge source
-racing_cells("tissue_point", scheme_param, "source", "point");
-```
-
-### Python Robotic Implementation
+The port is validated against the MATLAB, at two levels:
 
 ```bash
-cd robotic
-python main.py
+python -m cellsim.tests.test_matlab_parity   # deterministic blocks, bit-identical to MATLAB
+python -m cellsim.tests.test_properties      # invariants (conservation, monotonicity, ...)
+python -m cellsim.tests.test_ensemble        # slow (~4 min): success rates vs MATLAB
 ```
 
-## Tissue Environments
+Deterministic building blocks match MATLAB to floating point; ensemble success
+rates agree statistically. Individual trajectories do **not** match run-for-run —
+the interpolator and RNG differ and the dynamics are chaotic — so compare
+distributions, not paths.
 
-### Available Environment Files
+## Legacy MATLAB (`legacy/src/`)
 
-- **tissue_env.mat**: Standard tissue environment with gradient
-- **tissue_point.mat**: Point source gradient
+The original navigation code. `cellsim/` is a validated port of it and is the code
+you should run; `legacy/` is kept for provenance and for regenerating the test
+reference (`cellsim/tests/data/export_unit_ref.m`). The tissue-field `.mat` files
+stay in `tissue_sim/` and are loaded directly by `cellsim` — that data is **not**
+legacy, even though the `.m` scripts beside it (which generated the fields) are.
 
-### Environment Parameters
+## LEGI models
 
-- Gradient strength and direction
-- Binding/unbinding rates (kon, koff)
-- Tissue geometry and boundary conditions
-- Flow fields (where applicable)
+`LEGI/` contains Local Excitation, Global Inhibition models (code from
+[Shi et al. 2013](https://journals.plos.org/ploscompbiol/article?id=10.1371/journal.pcbi.1003122)),
+kept as reference. Not part of the `cellsim` simulation path.
 
-## LEGI Models
+## License
 
-The `LEGI/` directory contains Local Excitation, Global Inhibition models (code from [Shi et al (2013)](https://journals.plos.org/ploscompbiol/article?id=10.1371/journal.pcbi.1003122)):
-
-- **LEGI_BEN_POL.m**: LEGI model with BEN polarization
-- **LEGI_BEN_POL_LSM.m**: LEGI with Lateral Segregation Model
-- **RDS_grdt_sde.m**: Reaction-diffusion system with gradient and stochastic differential equations
-- **make_init.m**: Initialize LEGI model parameters
-- **plot_BEN_POL.m**: Visualization tools for LEGI results
+See [LICENSE](LICENSE).

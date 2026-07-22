@@ -9,7 +9,7 @@ addParameter(p,'mode',"static",@isstring);
 addParameter(p,'decoder_method',"optimal_noise",@isstring);
 % options: optimal_noise, perfect, randomwalk, circle
 addParameter(p,'receptor',"uniform",@isstring);
-% options: feedback, uniform, w1dist, bayes
+% options: feedback, uniform, bayes
 addParameter(p,'turncell',false,@islogical);
 % whether to rotate cell 180 degrees half way through simulation
 addParameter(p,'source',"edge",@isstring);

@@ -16,7 +16,7 @@ addParameter(p,'envmodel',"tissue",@isstring); %tissue or grad
 addParameter(p,'decoder_method',"optimal_noise",@isstring);
 % options: optimal_noise,perfect,randomwalk
 addParameter(p,'receptor',"feedback",@isstring);
-% options: feedback, uniform, w1dist
+% options: feedback, uniform
 addParameter(p,'rununif',false,@islogical);
 addParameter(p,'index',"",@isstring);
 addParameter(p,'source',"edge",@isstring);
@@ -37,9 +37,12 @@ index = p.Results.index;
 source = p.Results.source;
 alpha = p.Results.alpha;
 
-% optimization requires gamma
-if isequal(receptor, "w1dist") && ~isfield(param,'gamma')
-    error("please provide parameter gamma")
+% an unrecognised scheme has no branch in cell_move and would silently leave
+% the receptor profile at zero, so fail loudly instead
+validReceptors = ["feedback","uniform","bayes"];
+if ~ismember(receptor, validReceptors)
+    error("racing_cells:badReceptor", "receptor must be one of: %s", ...
+          strjoin(validReceptors, ", "))
 end
 
 % establish cell shape
@@ -105,17 +108,30 @@ end
 if min(env,[],'all') < 0
     warning('negative ligand value')
 end
+ftissue = @(x,y) fconc(x,y)*conversion_factor; %count
 if isequal(envmodel, "tissue")
-    ftissue = @(x,y) fconc(x,y)*conversion_factor;
-    param.fcount = ftissue; %count
+    param.fcount = ftissue;
     if isequal(receptor,'bayes')
         param.cmat = 0;
     end
 end
-if isequal(envmodel, "grad") || alpha > 0
+% the pure gradient model is the alpha = 1 limit of the blend below
+if isequal(envmodel, "grad")
+    alpha = 1;
+end
+if alpha > 0
+    % the fit is to the y-averaged x-profile, which only describes an edge
+    % source; a point source has no such profile
+    if isequal(source,"point")
+        error("envmodel 'grad' and alpha > 0 require source 'edge'")
+    end
     f = fit((1:xmax)',mean(env)','exp1');
     fgrad = @(x,y) f(x)*conversion_factor; %count
-    param.fcount = @(x,y) alpha*fgrad(x,y) + (1-alpha)*ftissue(x,y);
+    if alpha >= 1
+        param.fcount = fgrad;
+    else
+        param.fcount = @(x,y) alpha*fgrad(x,y) + (1-alpha)*ftissue(x,y);
+    end
 %     if makeplot
 %         plot(1:xmax,f(1:xmax),1:xmax,mean(env(:,1:xmax)));
 %     end
@@ -236,9 +252,6 @@ if isequal(envmodel, "grad")
     fname = strcat(fname,"_grad");
 end
 filename = strcat(fname,"_",task,"_",receptor);
-if isequal(receptor,"w1dist")
-    filename = strcat(filename,"_gamma",num2str(param.gamma));
-end
 if ~isequal(decoder_method,"optimal_noise")
     filename = strcat(filename,"_",decoder_method);
 end
