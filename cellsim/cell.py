@@ -57,7 +57,7 @@ def simulate_cell(
     start: np.ndarray,
     receptor: str = "feedback",
     mode: str = "localization",
-    decoder_method: str = "optimal_noise",
+    decoder_method: str = "weighted_mean",
     rng: np.random.Generator | None = None,
 ) -> CellResult:
     """Simulate one cell. Port of ``legacy/src/cell_move.m``.

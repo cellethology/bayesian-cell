@@ -86,7 +86,7 @@ def race(
     p: Params,
     source: str = "point",
     receptor: str = "feedback",
-    decoder_method: str = "optimal_noise",
+    decoder_method: str = "weighted_mean",
     n_run: int = N_RUN,
     processes: int | None = None,
     seed: int = 0,

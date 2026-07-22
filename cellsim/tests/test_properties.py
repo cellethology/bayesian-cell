@@ -80,7 +80,7 @@ def test_uniform_scheme_holds_receptors_fixed():
     field = LigandField("tissue_point_noflow", P.conversion_factor, "point")
     p = P.replace(T=300.0)
     res = simulate_cell(p, field, np.array([90.0, 0.0]), receptor="uniform",
-                        mode="localization", decoder_method="perfect",
+                        mode="localization", decoder_method="steepest",
                         rng=np.random.default_rng(0))
     n = res.n_used
     assert np.allclose(res.f[:n], res.f[0]), "uniform receptors drifted"
@@ -91,7 +91,7 @@ def test_feedback_conserves_total_receptors_in_a_real_run():
     field = LigandField("tissue_point_noflow", P.conversion_factor, "point")
     p = P.replace(T=600.0)
     res = simulate_cell(p, field, np.array([90.0, 0.0]), receptor="feedback",
-                        mode="localization", decoder_method="perfect",
+                        mode="localization", decoder_method="steepest",
                         rng=np.random.default_rng(0))
     n = res.n_used
     total = res.f[:n].sum(axis=1) + res.FC[:n]

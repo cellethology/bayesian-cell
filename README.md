@@ -45,6 +45,12 @@ heterogeneous tissue), `tissue_env` (edge source), `radial_exp` (smooth analytic
 exponential gradient — the clean, heterogeneity-free control), or any tissue-field
 `.mat` stem under `tissue_sim/` (e.g. `tissue_env_koff=1e-2`).
 
+**Decoders** (`--decoder`): how the activity profile becomes a bearing —
+`weighted_mean` (activity-weighted circular mean over all bins; default),
+`steepest` (the single bin of largest front-to-back contrast), or `random`
+(ignores the signal; control). `--direction-noise` then adds Gaussian steering
+noise on top of *any* decoder (set it to `0` for noiseless movement).
+
 ## Using it as a library
 
 ```python

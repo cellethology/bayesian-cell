@@ -64,8 +64,8 @@ def test_cn_matrices_vector_are_bit_identical():
 
 def test_decoder_perfect():
     act = REF["act_test"].ravel()
-    rng = np.random.default_rng(0)  # unused by the 'perfect' branch
-    got = next_position(np.array([10.0, 5.0]), act, 1.0, "perfect", rng)
+    rng = np.random.default_rng(0)  # unused by the 'steepest' branch (noiseless)
+    got = next_position(np.array([10.0, 5.0]), act, 1.0, "steepest", rng)
     assert_close(got, REF["next_perfect"], 0.0, "nextpos perfect")
 
 

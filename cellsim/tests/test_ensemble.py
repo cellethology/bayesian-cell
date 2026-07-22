@@ -41,7 +41,7 @@ def _measure(overrides, nrep=NREP):
     p = Params(N=100, mean_cell_radius=6.0, T=4 * 3600.0, rtot=2000.0,
                kd_nM=10.0, d=0.01, nsamp=30, **overrides)
     rates = [race(ENV, p, source="point", receptor="feedback",
-                  decoder_method="optimal_noise", seed=100 + r).success_rate
+                  decoder_method="weighted_mean", seed=100 + r).success_rate
              for r in range(nrep)]
     a = np.array(rates)
     return a.mean(), a.std(ddof=1) / np.sqrt(nrep)

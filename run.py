@@ -40,13 +40,13 @@ def build_parser() -> argparse.ArgumentParser:
 
     cell = ap.add_argument_group("cell / navigation")
     cell.add_argument("--receptor", default="feedback", choices=["feedback", "uniform"])
-    cell.add_argument("--decoder", default="optimal_noise",
-                      choices=["optimal_noise", "perfect", "randomwalk"])
+    cell.add_argument("--decoder", default="weighted_mean",
+                      choices=["weighted_mean", "steepest", "random"])
     cell.add_argument("--bins", type=int, default=100, help="membrane bins N")
     cell.add_argument("--radius", type=float, default=6.0, help="cell radius (um)")
     cell.add_argument("--stepsz", type=float, default=1.0, help="cell step size (um/move)")
     cell.add_argument("--direction-noise", type=float, default=0.1,
-                      help="std (rad) of steering noise in the optimal_noise decoder")
+                      help="std (rad) of steering noise added after any decoder")
 
     rec = ap.add_argument_group("receptor / belief")
     rec.add_argument("--d", type=float, default=0.01, help="membrane diffusivity (belief blur)")
