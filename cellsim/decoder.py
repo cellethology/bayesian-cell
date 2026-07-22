@@ -32,6 +32,12 @@ def next_position(
           antipodal difference). Winner-take-all; immune to a uniform baseline.
           Requires even N.
       random : a uniformly random bin -- ignores the signal (chance-level control).
+
+    When a signal-based decoder gets no directional information -- activity all
+    zero or perfectly uniform, common in the shot-noise regime when the cell
+    detects no molecules -- there is no bearing to read, so it falls back to a
+    uniform random direction. (Without this, ``atan2(0,0)`` and ``argmax`` of an
+    all-equal array both return index 0, biasing every blind step to +x.)
     """
     m = activity.size
     if method == "steepest" and m % 2 != 0:
@@ -42,10 +48,16 @@ def next_position(
     if method == "weighted_mean":
         z1 = np.sum(np.cos(phi) * activity)
         z2 = np.sum(np.sin(phi) * activity)
-        angle = np.arctan2(z2, z1)
+        if z1 * z1 + z2 * z2 < 1e-20:          # no net direction -> signal-blind
+            angle = rng.uniform(-np.pi, np.pi)
+        else:
+            angle = np.arctan2(z2, z1)
     elif method == "steepest":
-        idx = int(np.argmax(activity - np.roll(activity, m // 2)))
-        angle = phi[idx]
+        contrast = activity - np.roll(activity, m // 2)
+        if contrast.max() - contrast.min() < 1e-12:  # all contrasts equal -> blind
+            angle = rng.uniform(-np.pi, np.pi)
+        else:
+            angle = phi[int(np.argmax(contrast))]
     elif method == "random":
         angle = phi[rng.integers(0, m)]
     else:
