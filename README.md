@@ -12,18 +12,22 @@ it was ported from lives in `legacy/` for reference.
 
 ## Quick start
 
-```bash
-pip install -r requirements.txt
+Install [uv](https://docs.astral.sh/uv/), then from the repo root:
 
-python run.py                                  # 100 cells, tissue point source, 4 h
-python run.py --env radial_exp                 # smooth analytic gradient instead
-python run.py --noisy --nsamp 1                # single-sample Poisson (shot-noise) sensing
-python run.py --d 0.02 --stepsz 1.0 --reps 5   # 5 repeats with different seeds
-python run.py --dcouple --couple-form invsqrt  # signal-coupled diffusivity
-python run.py --help                           # every knob, grouped
+```bash
+uv sync                                              # create the env (numpy, scipy, matplotlib)
+uv run python run.py                                 # 100 cells, tissue point source, 4 h
+uv run python run.py --env radial_exp                # smooth analytic gradient instead
+uv run python run.py --noisy --nsamp 1               # single-sample Poisson (shot-noise) sensing
+uv run python run.py --d 0.02 --reps 5               # 5 repeats with different seeds
+uv run python run.py --dcouple --couple-form invsqrt # signal-coupled diffusivity
+uv run python run.py --help                          # every knob, grouped
 ```
 
 Each run prints the success rate and arrival-time distribution per repeat.
+
+Prefer pip? `pip install -e .` then `python run.py ...`. The robotic/ EKF study
+needs extra packages: `uv sync --extra robotic`.
 
 ## What you can vary
 
@@ -58,6 +62,7 @@ print(result.summary())          # success rate + arrival quartiles
 
 ```
 .
+├── pyproject.toml       # dependencies + package config (uv / pip)
 ├── run.py               # command-line entry point
 ├── cellsim/             # the simulator (active codebase)
 │   ├── params.py        #   parameters
@@ -80,9 +85,9 @@ print(result.summary())          # success rate + arrival quartiles
 The port is validated against the MATLAB, at two levels:
 
 ```bash
-python -m cellsim.tests.test_matlab_parity   # deterministic blocks, bit-identical to MATLAB
-python -m cellsim.tests.test_properties      # invariants (conservation, monotonicity, ...)
-python -m cellsim.tests.test_ensemble        # slow (~4 min): success rates vs MATLAB
+uv run python -m cellsim.tests.test_matlab_parity   # deterministic blocks, bit-identical to MATLAB
+uv run python -m cellsim.tests.test_properties      # invariants (conservation, monotonicity, ...)
+uv run python -m cellsim.tests.test_ensemble        # slow (~4 min): success rates vs MATLAB
 ```
 
 Deterministic building blocks match MATLAB to floating point; ensemble success

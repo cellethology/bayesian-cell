@@ -1,0 +1,32 @@
+[project]
+name = "cellsim"
+version = "0.1.0"
+description = "Cell navigation simulator: Bayesian chemotaxis via receptor biochemistry"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { file = "LICENSE" }
+dependencies = [
+    "numpy>=1.24",
+    "scipy>=1.10",
+    "matplotlib>=3.6",
+]
+
+# Extra dependencies for the separate robotic/ EKF study (not needed for cellsim).
+#   uv sync --extra robotic
+[project.optional-dependencies]
+robotic = [
+    "filterpy>=1.4.5",
+    "pandas>=2.0",
+    "seaborn>=0.13",
+    "tqdm>=4.60",
+    "numba>=0.59",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+# Only cellsim/ is the installable package; legacy/, robotic/, LEGI/, tissue_sim/
+# are repo content, not part of the wheel.
+[tool.hatch.build.targets.wheel]
+packages = ["cellsim"]
