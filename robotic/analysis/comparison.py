@@ -12,7 +12,7 @@ from typing import Dict, Any, Optional
 import os
 import warnings
 from scipy import stats
-from core import EKFEnvironment, EKFVisualizer
+from ..core import EKFEnvironment, EKFVisualizer
 
 # Set Arial as default font
 plt.rcParams["font.family"] = "Arial"

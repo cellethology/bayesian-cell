@@ -4,19 +4,28 @@ Main entry point for target tracking simulation with FilterPy-based filters.
 Supports both EKF and UKF with comprehensive visualization and CLI interface.
 
 Usage:
-    python main.py --filter EKF --adaptive-process
-    python main.py --filter UKF --adaptive-measurement --signal-max 25
-    python main.py --config custom_config.json --save-plots --verbose
+    python -m robotic --filter EKF --adaptive-process
+    python -m robotic --filter UKF --adaptive-measurement --signal-max 25
+    python -m robotic --config custom_config.json --save-plots --verbose
 """
 
+# Support the historical direct-script command as well as package execution.
+if __package__ in (None, ""):
+    import sys
+    from pathlib import Path
+
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+    __package__ = "robotic"
+
 import argparse
+from pathlib import Path
 import sys
 import time
 import numpy as np
 import matplotlib.pyplot as plt
 
-from core import EKFEnvironment, EKFVisualizer, get_base_config
-from shared import (
+from .core import EKFEnvironment, EKFVisualizer, get_base_config
+from .shared import (
     ensure_output_directory, 
     print_config_summary, 
     generate_default_output_path,
@@ -34,10 +43,10 @@ def create_parser():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  python main.py --filter EKF --adaptive-process
-  python main.py --filter UKF --adaptive-measurement --signal-max 25
-  python main.py --config my_config.json --save-plots --verbose
-  python main.py --filter EKF --max-steps 50000 --output-dir results/
+  python -m robotic --filter EKF --adaptive-process
+  python -m robotic --filter UKF --adaptive-measurement --signal-max 25
+  python -m robotic --config my_config.json --save-plots --verbose
+  python -m robotic --filter EKF --max-steps 50000 --output-dir results/
         """
     )
 
@@ -239,7 +248,9 @@ def run_simulation(config, verbose=False):
     if verbose:
         print("Creating simulation environment...")
     
-    env = EKFEnvironment(config, verbose=verbose)
+    env = EKFEnvironment(
+        config, verbose=verbose, random_seed=config.get("random_seed")
+    )
 
     # Run simulation
     if verbose:
@@ -268,11 +279,11 @@ def run_simulation(config, verbose=False):
     
     # Filter-specific statistics
     sigma_history = results.get("sigma_history", [])
-    if sigma_history:
+    if len(sigma_history):
         print(f"Process noise σ_Q - mean: {np.mean(sigma_history):.3f}, final: {sigma_history[-1]:.3f}")
     
     R_est_history = results.get("R_est_history", [])
-    if R_est_history and config.get("adaptive_measurement_noise", False):
+    if len(R_est_history) and config.get("adaptive_measurement_noise", False):
         print(f"Measurement noise R - mean: {np.mean(R_est_history):.3f}, final: {R_est_history[-1]:.3f}")
 
     print(f"{'='*60}")
@@ -281,74 +292,38 @@ def run_simulation(config, verbose=False):
 
 
 def create_visualizations(results, config, args):
-    """Create and optionally save visualization plots."""
-    
+    """Create plots through the visualizer's public interface."""
+    if args.no_show_plots and not args.save_plots:
+        return
+
     if not args.quiet:
         print("Creating visualizations...")
 
-    # Create visualizer
     visualizer = EKFVisualizer(results)
+    figures = [("trajectory", visualizer.plot_trajectory_only(figsize=(12, 10)))]
+    if len(results.get("sigma_history", [])) or len(results.get("R_est_history", [])):
+        figures.append(("filter_stats", visualizer.plot_sigma_only(figsize=(15, 5))))
+    if results["target_reached"] and results["steps_completed"] < 10000:
+        figures.append(("belief", visualizer.plot_belief_only(figsize=(10, 8))))
 
-    # Ensure output directory exists
     if args.save_plots:
         ensure_output_directory(args.output_dir)
 
-    # 1. Main trajectory plot with signal field
-    fig1 = plt.figure(figsize=(12, 10))
-    visualizer.plot_trajectory_with_signal_field(
-        fig=fig1,
-        show_belief_evolution=True,
-        show_measurements=True
-    )
-    fig1.suptitle(f"{config['filter_type']} Target Tracking Simulation", fontsize=16)
-    
-    if args.save_plots:
-        filepath = generate_default_output_path(
-            f"trajectory_{config['filter_type']}", 
-            include_timestamp=True
-        )
-        filepath = filepath.replace("output/", f"{args.output_dir}/")
-        fig1.savefig(filepath, dpi=300, bbox_inches='tight')
-        if not args.quiet:
-            print(f"Saved trajectory plot: {filepath}")
-
-    # 2. Filter statistics plot
-    if results.get("sigma_history") or results.get("R_est_history"):
-        fig2 = plt.figure(figsize=(15, 5))
-        visualizer.plot_filter_statistics(fig=fig2)
-        fig2.suptitle(f"{config['filter_type']} Filter Statistics", fontsize=16)
-        
+    for name, figure in figures:
+        figure.suptitle(f"{config['filter_type']} {name.replace('_', ' ').title()}", fontsize=16)
         if args.save_plots:
-            filepath = generate_default_output_path(
-                f"filter_stats_{config['filter_type']}", 
-                include_timestamp=True
-            )
-            filepath = filepath.replace("output/", f"{args.output_dir}/")
-            fig2.savefig(filepath, dpi=300, bbox_inches='tight')
+            filename = Path(generate_default_output_path(
+                f"{name}_{config['filter_type']}", include_timestamp=True
+            )).name
+            filepath = Path(args.output_dir) / filename
+            figure.savefig(filepath, dpi=300, bbox_inches="tight")
             if not args.quiet:
-                print(f"Saved filter statistics plot: {filepath}")
+                print(f"Saved {name}: {filepath}")
 
-    # 3. Belief evolution plot (if target was reached quickly enough)
-    if results["target_reached"] and results["steps_completed"] < 10000:
-        fig3 = plt.figure(figsize=(10, 8))
-        visualizer.plot_belief_evolution(
-            fig=fig3,
-            n_ellipses=min(10, results["steps_completed"] // 100)
-        )
-        fig3.suptitle(f"{config['filter_type']} Belief Evolution", fontsize=16)
-        
-        if args.save_plots:
-            filepath = generate_default_output_path(
-                f"belief_evolution_{config['filter_type']}", 
-                include_timestamp=True
-            )
-            filepath = filepath.replace("output/", f"{args.output_dir}/")
-            fig3.savefig(filepath, dpi=300, bbox_inches='tight')
-            if not args.quiet:
-                print(f"Saved belief evolution plot: {filepath}")
-
-    # Show plots if not suppressed
-    if not args.no_show_plots:
+    if args.no_show_plots:
+        for _, figure in figures:
+            plt.close(figure)
+    else:
         plt.show()
 
 

@@ -5,7 +5,7 @@ Now supports both EKF and UKF through unified interface.
 """
 
 import numpy as np
-from filters import FilterPyExtendedKalmanFilter, FilterPyUnscentedKalmanFilter
+from ..filters import FilterPyExtendedKalmanFilter, FilterPyUnscentedKalmanFilter
 
 
 class EKFEnvironment:
@@ -22,8 +22,7 @@ class EKFEnvironment:
         Args:
             config: Configuration dictionary with simulation parameters
             verbose: Whether to print debug information
-            target_rng: Optional random state for target movement (defaults to np.random)
-            robot_rng: Optional random state for robot movement and measurements (defaults to np.random)
+            random_seed: Optional seed for independent target and robot generators
         """
 
         self.config = config
@@ -32,7 +31,9 @@ class EKFEnvironment:
 
         # Store random number generators for consistent randomness
         self.target_rng = np.random.default_rng(seed=random_seed)
-        self.robot_rng = np.random.default_rng(seed=random_seed + 1000)
+        self.robot_rng = np.random.default_rng(
+            seed=None if random_seed is None else random_seed + 1000
+        )
 
         # Initialize positions
         self.robot_pos = np.array(self.config["robot_start_pos"], dtype=float)

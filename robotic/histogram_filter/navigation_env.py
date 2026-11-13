@@ -3,10 +3,18 @@ Navigation environment that orchestrates all components.
 Main coordinator for Bayesian navigation simulation.
 """
 
+# Support the historical direct-script command as well as package execution.
+if __package__ in (None, ""):
+    import sys
+    from pathlib import Path
+
+    sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+    __package__ = "robotic.histogram_filter"
+
 import numpy as np
-from signal_model import SignalModel
-from motion_model import MotionModel
-from bayesian_filter import BayesianFilter
+from .signal_model import SignalModel
+from .motion_model import MotionModel
+from .bayesian_filter import BayesianFilter
 
 
 class NavigationEnvironment:

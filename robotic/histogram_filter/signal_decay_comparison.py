@@ -3,10 +3,18 @@ Signal decay comparison study for three Kalman Filter configurations.
 Compares Standard KF, Signal-aware KF, and Adaptive KF across different signal decay values.
 """
 
+# Support the historical direct-script command as well as package execution.
+if __package__ in (None, ""):
+    import sys
+    from pathlib import Path
+
+    sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+    __package__ = "robotic.histogram_filter"
+
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
-from histogram_filter.multi_config_comparison import MultiConfigComparison
+from .multi_config_comparison import MultiConfigComparison
 import seaborn as sns
 
 

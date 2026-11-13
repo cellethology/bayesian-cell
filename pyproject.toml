@@ -22,11 +22,15 @@ robotic = [
     "numba>=0.59",
 ]
 
+[project.scripts]
+cellsim = "cellsim.cli:main"
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
-# Only cellsim/ is the installable package; legacy/, robotic/, LEGI/, tissue_sim/
-# are repo content, not part of the wheel.
+# Python components share this project; robotics dependencies remain optional.
+# MATLAB reference code and tissue data stay in the repository.
 [tool.hatch.build.targets.wheel]
-packages = ["cellsim"]
+packages = ["cellsim", "robotic", "source_kf"]
+exclude = ["robotic/output/**"]

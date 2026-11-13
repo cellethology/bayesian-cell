@@ -44,9 +44,8 @@ _result/
 # Personal shell config (not part of the project)
 .zshrc
 
-# Ignore version control files
+# Ignore version control internals
 .git/
-.gitignore
 
 # Ignore Jupyter Notebook checkpoints
 .ipynb_checkpoints/
@@ -76,3 +75,7 @@ figures/
 *.gz
 *.bz2
 *.rar
+
+# Local test caches and generated run output
+.pytest_cache/
+/output/

@@ -16,18 +16,29 @@ Install [uv](https://docs.astral.sh/uv/), then from the repo root:
 
 ```bash
 uv sync                                              # create the env (numpy, scipy, matplotlib)
-uv run python run.py                                 # 100 cells, tissue point source, 4 h
-uv run python run.py --env radial_exp                # smooth analytic gradient instead
-uv run python run.py --no-noisy                      # deterministic sensing (MATLAB-style)
-uv run python run.py --d 0.02 --reps 5               # 5 repeats with different seeds
-uv run python run.py --dcouple                       # signal-coupled diffusivity
-uv run python run.py --help                          # every knob, grouped
+uv run python -m cellsim                             # 100 cells, tissue point source, 4 h
+uv run python -m cellsim --env radial_exp            # smooth analytic gradient instead
+uv run python -m cellsim --no-noisy                  # deterministic sensing (MATLAB-style)
+uv run python -m cellsim --d 0.02 --reps 5           # 5 repeats with different seeds
+uv run python -m cellsim --dcouple                   # signal-coupled diffusivity
+uv run python -m cellsim --help                      # every knob, grouped
 ```
 
 Each run prints the success rate and arrival-time distribution per repeat.
 
-Prefer pip? `pip install -e .` then `python run.py ...`. The robotic/ EKF study
-needs extra packages: `uv sync --extra robotic`.
+Prefer pip? `pip install -e .` then `python -m cellsim ...` (or `cellsim ...`).
+The existing `python run.py ...` command still works.
+
+The other Python components use the same environment and package convention:
+
+```bash
+uv run python -m source_kf --help                    # source-localization demo
+uv sync --extra robotic                              # add robotics dependencies
+uv run --extra robotic python -m robotic --help      # EKF / UKF tracking demo
+```
+
+See [the development guide](docs/development.md) for where code belongs, and
+[the robotics guide](robotic/README.md) for studies and plotting commands.
 
 ## What you can vary
 
@@ -68,32 +79,48 @@ print(result.summary())          # success rate + arrival quartiles
 
 ```
 .
-├── pyproject.toml       # dependencies + package config (uv / pip)
-├── run.py               # command-line entry point
-├── cellsim/             # the simulator (active codebase)
-│   ├── params.py        #   parameters
-│   ├── environment.py   #   ligand fields (tissue .mat loader + analytic gradient)
-│   ├── receptor.py      #   sensing + Crank-Nicolson membrane operator
-│   ├── cell.py          #   single-cell simulation
-│   ├── ensemble.py      #   race N cells, score arrivals
-│   └── tests/           #   regression tests (see below)
-├── tissue_sim/          # tissue ligand-field data (.mat) that cellsim loads,
-│   ├── point_source/    #   alongside the MATLAB scripts that generated it
-│   └── koff_variants/   #   fields at different binding kinetics
-├── legacy/              # original MATLAB navigation code (reference only)
-│   └── src/
-├── LEGI/                # LEGI models (Shi et al. 2013), reference
-└── robotic/             # separate Python robotics/EKF study
+├── pyproject.toml       # shared Python dependencies, extras, and package config
+├── uv.lock              # pinned dependency versions
+├── run.py               # compatibility wrapper for cellsim.cli
+├── cellsim/             # cell-navigation simulator
+│   ├── __main__.py      # python -m cellsim
+│   ├── cli.py           # argument parsing and run orchestration
+│   ├── params.py        # parameters
+│   ├── environment.py   # tissue .mat loader and analytic gradients
+│   ├── receptor.py      # sensing and membrane dynamics
+│   ├── decoder.py       # activity-to-bearing readouts
+│   ├── cell.py          # single-cell simulation
+│   ├── ensemble.py      # ensembles and arrival statistics
+│   └── tests/           # regression tests and MATLAB parity fixtures
+├── source_kf/           # receptor-based source-localization demo
+├── robotic/             # EKF, UKF, and histogram-filter studies
+│   ├── core/            # environments, configuration, visualization
+│   ├── filters/         # Kalman-filter implementations
+│   ├── shared/          # signal models and common utilities
+│   ├── analysis/        # comparisons and plotting
+│   ├── histogram_filter/ # grid-based Bayesian navigation study
+│   └── output/          # existing study results and figures
+├── tissue_sim/          # tissue input data and MATLAB field generators
+│   ├── point_source/
+│   └── koff_variants/
+├── legacy/              # original MATLAB navigation code
+├── LEGI/                # reference LEGI models
+└── docs/                # development and organization guide
 ```
+
+Generated scratch figures belong in `figures/`; new scratch run results can go in
+`output/`. Both root folders are ignored by Git. Existing results in
+`robotic/output/` retain their paths. Tissue data and parity fixtures remain beside
+the code that generates or validates them.
 
 ## Tests
 
 The port is validated against the MATLAB, at two levels:
 
 ```bash
-uv run python -m cellsim.tests.test_matlab_parity   # deterministic blocks, bit-identical to MATLAB
-uv run python -m cellsim.tests.test_properties      # invariants (conservation, monotonicity, ...)
-uv run python -m cellsim.tests.test_ensemble        # slow (~4 min): success rates vs MATLAB
+uv run python -m cellsim.tests.test_matlab_parity    # deterministic blocks, bit-identical to MATLAB
+uv run python -m cellsim.tests.test_properties       # invariants (conservation, monotonicity, ...)
+uv run python -m cellsim.tests.test_ensemble         # slow (~4 min): success rates vs MATLAB
 ```
 
 Deterministic building blocks match MATLAB to floating point; ensemble success

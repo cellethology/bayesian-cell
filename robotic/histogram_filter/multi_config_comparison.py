@@ -3,16 +3,24 @@ Advanced multi-configuration comparison tool for Bayesian navigation.
 Provides easy-to-use interface for comparing arbitrary sets of configurations.
 """
 
+# Support the historical direct-script command as well as package execution.
+if __package__ in (None, ""):
+    import sys
+    from pathlib import Path
+
+    sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+    __package__ = "robotic.histogram_filter"
+
 import numpy as np
 import matplotlib.pyplot as plt
 from multiprocessing import Pool
 from tqdm import tqdm
-from navigation_env import run_navigation_simulation
+from .navigation_env import run_navigation_simulation
 import pandas as pd
 from typing import Dict, Any, Optional
 import os
 from scipy import stats
-from visualization import NavigationVisualizer
+from .visualization import NavigationVisualizer
 
 
 def run_single_config_simulation(args):
