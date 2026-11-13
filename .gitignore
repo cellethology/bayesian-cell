@@ -79,3 +79,6 @@ figures/
 # Local test caches and generated run output
 .pytest_cache/
 /output/
+
+# Local MATLAB reference implementation (excluded from GitHub)
+/legacy/

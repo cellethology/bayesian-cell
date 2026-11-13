@@ -14,7 +14,8 @@
 | `robotic/histogram_filter/` | Grid-based Bayesian navigation | working on histogram-filter experiments |
 | `robotic/shared/` | Utilities used across robotics components | sharing signal models, statistics, or file handling |
 | `tissue_sim/` | Tissue-field inputs and their MATLAB generators | generating or adding ligand fields |
-| `legacy/`, `LEGI/` | MATLAB implementations and reference models | inspecting provenance or maintaining those models |
+| `legacy/` (local, Git-ignored) | Original MATLAB navigation implementation | regenerating MATLAB parity fixtures |
+| `LEGI/` | Tracked MATLAB reference models | inspecting or maintaining LEGI models |
 
 Keep experiment orchestration separate from reusable model functions. Use relative
 imports within each Python package, and qualified imports such as
@@ -52,7 +53,9 @@ files outside `.venv/`.
 - Keep `.mat` tissue inputs in `tissue_sim/`. `cellsim.environment` resolves them
   relative to the checkout, including `point_source/` and `koff_variants/`.
 - Keep MATLAB regression fixtures in `cellsim/tests/data/` and retain their
-  generator `export_unit_ref.m` for provenance.
+  generator `export_unit_ref.m` for provenance. Regenerating the fixtures requires
+  MATLAB and a local copy of `legacy/src/`; `legacy/` is ignored by Git and is not
+  distributed in new checkouts. Existing tests use the committed fixtures.
 - Use root `figures/` for scratch figures and root `output/` for scratch run
   results. These are ignored by Git. Relative output paths use the working
   directory; run documented commands from the repository root.

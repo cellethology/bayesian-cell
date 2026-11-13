@@ -8,7 +8,8 @@ pool enforces normalisation. An ensemble of cells races from a start ring toward
 source; the simulator reports how many arrive and how fast.
 
 The active codebase is **`cellsim/`** (Python). The original MATLAB implementation
-it was ported from lives in `legacy/` for reference.
+it was ported from is retained locally in `legacy/`, which is ignored by Git and
+excluded from new checkouts.
 
 ## Quick start
 
@@ -103,7 +104,7 @@ print(result.summary())          # success rate + arrival quartiles
 ├── tissue_sim/          # tissue input data and MATLAB field generators
 │   ├── point_source/
 │   └── koff_variants/
-├── legacy/              # original MATLAB navigation code
+├── legacy/              # optional local MATLAB reference (Git-ignored)
 ├── LEGI/                # reference LEGI models
 └── docs/                # development and organization guide
 ```
@@ -130,11 +131,14 @@ distributions, not paths.
 
 ## Legacy MATLAB (`legacy/src/`)
 
-The original navigation code. `cellsim/` is a validated port of it and is the code
-you should run; `legacy/` is kept for provenance and for regenerating the test
-reference (`cellsim/tests/data/export_unit_ref.m`). The tissue-field `.mat` files
-stay in `tissue_sim/` and are loaded directly by `cellsim` — that data is **not**
-legacy, even though the `.m` scripts beside it (which generated the fields) are.
+The original navigation code is retained locally in `legacy/`. This directory is
+ignored by Git and is absent from new checkouts. Python simulations and existing
+tests use `cellsim/` and the committed fixtures, so they do not require it.
+
+Regenerating the MATLAB reference with `cellsim/tests/data/export_unit_ref.m`
+requires a local copy of `legacy/src/` and MATLAB. Keep that reference copy when
+working on MATLAB parity. Tissue-field `.mat` files and their generators remain
+tracked in `tissue_sim/` and are loaded directly by `cellsim`.
 
 ## LEGI models
 
